@@ -17,23 +17,14 @@ export function SignInDialog() {
   }, [root.user, router]);
 
   const wsName = root.workspace?.name ?? "openheard";
-  const hasGoogle = root.googleSignIn;
   const callbackURL = typeof window !== "undefined" ? window.location.pathname : "/";
-
-  async function onSuccess() {
-    closeSignIn();
-    await router.invalidate();
-    await replayPendingAction(router);
-  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) closeSignIn(); }}>
       <DialogContent className="max-w-[380px]">
         <AuthForm
           wsName={wsName}
-          hasGoogle={hasGoogle}
           callbackURL={callbackURL}
-          onSuccess={onSuccess}
         />
       </DialogContent>
     </Dialog>

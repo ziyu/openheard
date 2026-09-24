@@ -4,27 +4,12 @@ import { DEFAULT_STATUSES, membership, status, workspace } from "@openheard/db/s
 import { env } from "@openheard/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
 
-import { accessConfigFrom, cloudflareAccess } from "./cloudflare-access";
+import { cloudflareAccess } from "./cloudflare-access";
 import { createKvSecondaryStorage, type KV } from "./kv-secondary-storage";
-
-const AUTH_FROM = { email: "hello@openheard.com", name: "openheard" };
-
-async function authSendEmail(to: string, subject: string, html: string, text: string) {
-  try {
-    if ((env as any).EMAIL) {
-      const result = await (env as any).EMAIL.send({ to, from: AUTH_FROM, subject, html, text });
-      console.log(`[auth] email sent: ${subject} → ${to}`, result?.messageId ?? "");
-    } else {
-      console.log(`[auth] ${subject} → ${to}\n  ${text.replace(/\n/g, "\n  ")}`);
-    }
-  } catch (err: any) {
-    console.error("[auth] email send failed:", err.message ?? err);
-  }
-}
+import { weboxSso } from "./webox-sso";
 
 // The demo workspace signs everyone into one shared account. Its cookies get
 // their own name and stay host-only, so entering the demo cannot overwrite a
@@ -38,13 +23,11 @@ export function createAuth(opts?: { demo?: boolean }) {
   const raw = (env as unknown as { ROOT_DOMAIN?: string }).ROOT_DOMAIN;
   const rootDomain = raw && raw !== "localhost" ? raw : undefined;
 
-  const googleId = (env as unknown as { GOOGLE_CLIENT_ID?: string }).GOOGLE_CLIENT_ID;
-  const googleSecret = (env as unknown as { GOOGLE_CLIENT_SECRET?: string }).GOOGLE_CLIENT_SECRET;
+  const weboxOrigin = (env as unknown as { WEBOX_SSO_ORIGIN?: string }).WEBOX_SSO_ORIGIN;
+  const adminWeboxId = (env as unknown as { WEBOX_SSO_ADMIN_USER_ID?: string }).WEBOX_SSO_ADMIN_USER_ID ?? "";
+  if (!opts?.demo && !weboxOrigin) throw new Error("WEBOX_SSO_ORIGIN is required");
 
   const kvStore = (env as unknown as { CACHE?: KV }).CACHE;
-
-  // The demo is one shared account; an Access identity never signs into it.
-  const access = opts?.demo ? null : accessConfigFrom(env as unknown as { CF_ACCESS_TEAM_DOMAIN?: string; CF_ACCESS_AUD?: string });
 
   return betterAuth({
     database: drizzleAdapter(db, {
@@ -76,20 +59,7 @@ export function createAuth(opts?: { demo?: boolean }) {
       },
     },
     trustedOrigins: [env.BETTER_AUTH_URL, ...(raw ? [`https://*.${raw}`, `http://*.${raw}`, `http://*.${raw}:*`] : [])],
-    ...(googleId && googleSecret
-      ? { socialProviders: { google: { clientId: googleId, clientSecret: googleSecret } } }
-      : {}),
-    emailAndPassword: {
-      enabled: true,
-      sendResetPassword: async ({ user, url }) => {
-        await authSendEmail(
-          user.email,
-          "Reset your password",
-          `<p>Click to reset your password. Expires in 1 hour.</p><p><a href="${url}">${url}</a></p>`,
-          `Reset your password: ${url}`,
-        );
-      },
-    },
+    emailAndPassword: { enabled: !!opts?.demo },
     user: {
       additionalFields: {
         role: { type: "string", input: false, defaultValue: "member" },
@@ -98,8 +68,9 @@ export function createAuth(opts?: { demo?: boolean }) {
     databaseHooks: {
       user: {
         create: {
-          // Self-host: first account becomes admin. Cloud: always member.
+          // Public Webox sign-in never grants admin just for arriving first.
           before: async (u) => {
+            if (!opts?.demo) return { data: { ...u, role: u.role === "admin" ? "admin" : "member" } };
             if (rootDomain) return { data: { ...u, role: "member" } };
             const existing = await db.select({ id: schema.user.id }).from(schema.user).limit(1);
             return { data: { ...u, role: existing.length === 0 ? "admin" : "member" } };
@@ -110,7 +81,9 @@ export function createAuth(opts?: { demo?: boolean }) {
               await db.insert(workspace).values({ id: "default" }).onConflictDoNothing();
               await db.insert(status).values(DEFAULT_STATUSES.map((d, i) => ({ workspaceId: "default", ...d, position: i }))).onConflictDoNothing();
             }
-            const role = rootDomain
+            const role = !opts?.demo
+              ? u.role === "admin" ? "admin" as const : "member" as const
+              : rootDomain
               ? "member" as const
               : (await db.select({ userId: membership.userId }).from(membership).where(eq(membership.workspaceId, "default")).limit(1)).length === 0
                 ? "admin" as const
@@ -126,28 +99,8 @@ export function createAuth(opts?: { demo?: boolean }) {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL || undefined,
     plugins: [
-      cloudflareAccess(access),
-      magicLink({
-        sendMagicLink: async ({ email, url }, ctx?) => {
-          let link = url;
-          // Better Auth builds the link from baseURL (the apex). Rewrite the
-          // origin to the workspace subdomain that actually made the request so
-          // the verify redirect lands on the correct host.
-          if (ctx?.request?.url) {
-            const reqOrigin = new URL(ctx.request.url).origin;
-            const baseOrigin = new URL(ctx.context.baseURL).origin;
-            if (reqOrigin !== baseOrigin) {
-              link = url.replace(baseOrigin, reqOrigin);
-            }
-          }
-          await authSendEmail(
-            email,
-            "Your sign-in link",
-            `<p>Click to sign in. Expires in 5 minutes.</p><p><a href="${link}">${link}</a></p>`,
-            `Sign in: ${link}`,
-          );
-        },
-      }),
+      cloudflareAccess(null),
+      ...(!opts?.demo && weboxOrigin ? [weboxSso(weboxOrigin, adminWeboxId)] : []),
       // Must stay last: it forwards cookies the plugins above set.
       tanstackStartCookies(),
     ],

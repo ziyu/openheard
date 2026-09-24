@@ -9,7 +9,7 @@ import { workspaceUrl } from "@/lib/workspace-url";
 
 export const Route = createFileRoute("/new")({
   beforeLoad: async () => {
-    if (!(await getUser())) throw redirect({ to: "/login" });
+    if ((await getUser())?.role !== "admin") throw redirect({ to: "/" });
   },
   head: () => ({ meta: [{ title: "New workspace · openheard" }] }),
   component: NewWorkspace,

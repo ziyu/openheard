@@ -44,7 +44,7 @@ pay for. Self-hosting is the default, not the afterthought.
 - Public board with voting, search, sorting and keyboard navigation
 - Posts with comments, reactions and a status timeline
 - Anonymous voting, sign-in gate on posting, optional approval queue
-- Sign in with Google, magic link or password
+- Sign in with Webox; public pages remain readable without an account
 
 **Manage**
 - Dashboard with inbox, internal notes, merge, pin, tags and ETA
@@ -85,24 +85,18 @@ cd packages/infra && bunx alchemy login --configure && cd ../..
 bun run deploy
 ```
 
-That provisions the Worker, the D1 database and KV, applies migrations and
-prints your URL. The first account to sign up becomes the admin.
+Before deploying, configure `WEBOX_SSO_ORIGIN` and
+`WEBOX_SSO_ADMIN_USER_ID` in `packages/infra/.env` and set
+Webox's `SSO_CLIENT_CALLBACK_URL` to this site's exact
+`https://<your-openheard-host>/api/webox/callback` URL. Set the admin ID to the
+Webox user ID of the intended owner before the first sign-in; arriving first
+does not grant admin access. OpenHeard has no separate public password, magic
+link or Google login. Public boards, roadmaps and changelogs remain readable
+without signing in.
 
-#### Behind Cloudflare Access
-
-To keep a board internal, put a [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/applications/)
-application in front of it. Set these in `packages/infra/.env` and redeploy,
-and people signed in to Access (or to WARP) land in openheard already signed
-in, with no second login:
-
-```bash
-CF_ACCESS_TEAM_DOMAIN=yourteam.cloudflareaccess.com   # Zero Trust > Settings
-CF_ACCESS_AUD=<the application's Audience (AUD) tag>  # Access application overview
-```
-
-The Access identity's email is matched to an existing account or creates one,
-exactly like a magic link. Signing out of openheard only lasts until the next
-page load while Access is in front; sign out of Access to leave.
+Deployment is separate from Webox. The commands above provision the Worker,
+D1 and KV, apply migrations and print the URL; run them only when you are ready
+to publish the feedback service.
 
 ### Run locally
 

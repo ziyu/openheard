@@ -8,8 +8,10 @@ bun run db:push:local   # creates apps/web/local.db
 bun run dev:local       # http://localhost:3001
 ```
 
-Sign up once (the first account becomes admin), then `bun run db:seed` for
-demo posts.
+Set `WEBOX_SSO_ORIGIN=http://127.0.0.1:7001` and
+`WEBOX_SSO_ADMIN_USER_ID=<your Webox user ID>` in `apps/web/.env`, then configure
+Webox's fixed callback as `http://localhost:3001/api/webox/callback`. Sign in
+with Webox and run `bun run db:seed` for demo posts.
 
 ## Before you open a PR
 
