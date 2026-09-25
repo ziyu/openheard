@@ -10,11 +10,11 @@ export function safeReturnTo(value: string | null, requestUrl: string): string {
 
 export function pendingCookie(request: Request, value: string, age: number): string {
   const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
-  return `webox_sso_pending=${value}; HttpOnly; SameSite=Lax; Path=/api/webox; Max-Age=${age}${secure}`;
+  return `external_sso_pending=${value}; HttpOnly; SameSite=Lax; Path=/api/sso; Max-Age=${age}${secure}`;
 }
 
 export function pendingFrom(request: Request): { state: string; verifier: string; returnTo: string } | null {
-  const raw = /(?:^|;\s*)webox_sso_pending=([^;]+)/.exec(request.headers.get("cookie") ?? "")?.[1];
+  const raw = /(?:^|;\s*)external_sso_pending=([^;]+)/.exec(request.headers.get("cookie") ?? "")?.[1];
   const match = /^([A-Za-z0-9_-]{22})\.([A-Za-z0-9_-]{43})\.(.+)$/.exec(raw ?? "");
   if (!match) return null;
   try {

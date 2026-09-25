@@ -1,9 +1,9 @@
 import { createAuth } from "@openheard/auth";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { pendingCookie, pendingFrom, safeReturnTo } from "@/lib/webox-sso";
+import { pendingCookie, pendingFrom, safeReturnTo } from "@/lib/external-sso";
 
-export const Route = createFileRoute("/api/webox/callback")({
+export const Route = createFileRoute("/api/sso/callback")({
   server: {
     handlers: {
       GET: async ({ request }) => {
@@ -17,19 +17,19 @@ export const Route = createFileRoute("/api/webox/callback")({
         });
         if (!pending || !code || !/^[A-Za-z0-9_-]{43}$/.test(code) ||
             url.searchParams.get("state") !== pending.state) {
-          return new Response("Webox sign-in failed", { status: 400, headers });
+          return new Response("SSO sign-in failed", { status: 400, headers });
         }
         try {
-          const signedIn = await createAuth().api.signInWebox({
+          const signedIn = await createAuth().api.signInExternal({
             body: { code, verifier: pending.verifier },
             headers: request.headers,
             asResponse: true,
           });
-          if (!signedIn.ok) return new Response("Webox sign-in failed", { status: 400, headers });
+          if (!signedIn.ok) return new Response("SSO sign-in failed", { status: 400, headers });
           headers.set("Location", safeReturnTo(pending.returnTo, request.url));
           return new Response(null, { status: 303, headers });
         } catch {
-          return new Response("Webox sign-in failed", { status: 400, headers });
+          return new Response("SSO sign-in failed", { status: 400, headers });
         }
       },
     },

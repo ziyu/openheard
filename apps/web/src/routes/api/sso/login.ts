@@ -1,20 +1,20 @@
 import { env } from "@openheard/env/server";
-import { weboxOrigin } from "@openheard/auth/webox-sso";
+import { ssoEndpoint } from "@openheard/auth/external-sso";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { pendingCookie, safeReturnTo } from "@/lib/webox-sso";
+import { pendingCookie, safeReturnTo } from "@/lib/external-sso";
 
-export const Route = createFileRoute("/api/webox/login")({
+export const Route = createFileRoute("/api/sso/login")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const origin = (env as unknown as { WEBOX_SSO_ORIGIN?: string }).WEBOX_SSO_ORIGIN;
-        if (!origin) return new Response("Webox sign-in unavailable", { status: 503 });
+        const endpoint = (env as unknown as { SSO_AUTHORIZE_URL?: string }).SSO_AUTHORIZE_URL;
+        if (!endpoint) return new Response("SSO sign-in unavailable", { status: 503 });
         const state = randomToken(16);
         const verifier = randomToken(32);
         const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
         const challenge = base64url(new Uint8Array(hash));
-        const authorize = new URL("/api/sso/authorize", weboxOrigin(origin));
+        const authorize = ssoEndpoint(endpoint);
         authorize.search = new URLSearchParams({
           state, code_challenge: challenge, code_challenge_method: "S256",
         }).toString();

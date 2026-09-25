@@ -7,21 +7,26 @@ const identity = z.object({
   user: z.object({ id: z.string().min(1), email: z.email(), name: z.string() }),
 });
 
-export function weboxOrigin(value: string): URL {
+export function ssoEndpoint(value: string): URL {
   const url = new URL(value);
   const local = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
   if ((!local && url.protocol !== "https:") || url.username || url.password ||
-      url.pathname !== "/" || url.search || url.hash) throw new Error("Invalid WEBOX_SSO_ORIGIN");
+      url.search || url.hash) throw new Error("Invalid SSO endpoint URL");
   return url;
 }
 
-export function weboxSso(origin: string, adminUserId: string) {
-  const site = weboxOrigin(origin);
+export function externalSso({ tokenUrl, providerId, adminUserId }: {
+  tokenUrl: string;
+  providerId: string;
+  adminUserId: string;
+}) {
+  const endpoint = ssoEndpoint(tokenUrl);
+  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(providerId)) throw new Error("Invalid SSO_PROVIDER_ID");
   return {
-    id: "webox-sso",
+    id: "external-sso",
     endpoints: {
-      signInWebox: createAuthEndpoint(
-        "/webox/sign-in",
+      signInExternal: createAuthEndpoint(
+        "/external/sign-in",
         {
           method: "POST",
           requireHeaders: true,
@@ -29,7 +34,7 @@ export function weboxSso(origin: string, adminUserId: string) {
           metadata: { SERVER_ONLY: true },
         },
         async (ctx) => {
-          const response = await fetch(new URL("/api/sso/token", site), {
+          const response = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ code: ctx.body.code, code_verifier: ctx.body.verifier }),
@@ -37,30 +42,30 @@ export function weboxSso(origin: string, adminUserId: string) {
           if (!response.ok) throw new APIError("UNAUTHORIZED");
           const parsed = identity.safeParse(await response.json());
           if (!parsed.success) throw new APIError("UNAUTHORIZED");
-          const weboxUser = parsed.data.user;
+          const externalUser = parsed.data.user;
           const adapter = ctx.context.internalAdapter;
-          const key = { issuer: "webox", accountId: weboxUser.id };
+          const key = { issuer: providerId, accountId: externalUser.id };
           const owner = await adapter.findAccountOwnerByKey(key);
           if (owner?.kind === "orphaned") throw new APIError("UNAUTHORIZED");
 
           let user = owner?.user;
           if (!user) {
             // An email alone is not proof of ownership of an existing local account.
-            if (await adapter.findUserByEmail(weboxUser.email)) throw new APIError("CONFLICT");
+            if (await adapter.findUserByEmail(externalUser.email)) throw new APIError("CONFLICT");
             const userData = {
-              email: weboxUser.email,
+              email: externalUser.email,
               emailVerified: true,
-              name: weboxUser.name,
-              role: weboxUser.id === adminUserId ? "admin" : "member",
+              name: externalUser.name,
+              role: externalUser.id === adminUserId ? "admin" : "member",
             };
-            const created = await adapter.createOAuthUser(userData, { ...key, providerId: "webox" });
+            const created = await adapter.createOAuthUser(userData, { ...key, providerId });
             user = created.user;
-          } else if (user.email !== weboxUser.email || user.name !== weboxUser.name) {
-            const emailOwner = await adapter.findUserByEmail(weboxUser.email);
+          } else if (user.email !== externalUser.email || user.name !== externalUser.name) {
+            const emailOwner = await adapter.findUserByEmail(externalUser.email);
             if (emailOwner && emailOwner.user.id !== user.id) throw new APIError("CONFLICT");
             const updated = await adapter.updateUser(user.id, {
-              email: weboxUser.email,
-              name: weboxUser.name,
+              email: externalUser.email,
+              name: externalUser.name,
             });
             if (!updated) throw new APIError("UNAUTHORIZED");
             user = updated;

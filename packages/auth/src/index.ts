@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 
 import { cloudflareAccess } from "./cloudflare-access";
 import { createKvSecondaryStorage, type KV } from "./kv-secondary-storage";
-import { weboxSso } from "./webox-sso";
+import { externalSso } from "./external-sso";
 
 // The demo workspace signs everyone into one shared account. Its cookies get
 // their own name and stay host-only, so entering the demo cannot overwrite a
@@ -23,9 +23,11 @@ export function createAuth(opts?: { demo?: boolean }) {
   const raw = (env as unknown as { ROOT_DOMAIN?: string }).ROOT_DOMAIN;
   const rootDomain = raw && raw !== "localhost" ? raw : undefined;
 
-  const weboxOrigin = (env as unknown as { WEBOX_SSO_ORIGIN?: string }).WEBOX_SSO_ORIGIN;
-  const adminWeboxId = (env as unknown as { WEBOX_SSO_ADMIN_USER_ID?: string }).WEBOX_SSO_ADMIN_USER_ID ?? "";
-  if (!opts?.demo && !weboxOrigin) throw new Error("WEBOX_SSO_ORIGIN is required");
+  const { SSO_TOKEN_URL: tokenUrl, SSO_PROVIDER_ID: providerId, SSO_ADMIN_USER_ID: adminUserId } =
+    env as unknown as { SSO_TOKEN_URL?: string; SSO_PROVIDER_ID?: string; SSO_ADMIN_USER_ID?: string };
+  if (!opts?.demo && (!tokenUrl || !providerId || !adminUserId)) {
+    throw new Error("SSO_TOKEN_URL, SSO_PROVIDER_ID and SSO_ADMIN_USER_ID are required");
+  }
 
   const kvStore = (env as unknown as { CACHE?: KV }).CACHE;
 
@@ -68,7 +70,7 @@ export function createAuth(opts?: { demo?: boolean }) {
     databaseHooks: {
       user: {
         create: {
-          // Public Webox sign-in never grants admin just for arriving first.
+          // Public SSO sign-in never grants admin just for arriving first.
           before: async (u) => {
             if (!opts?.demo) return { data: { ...u, role: u.role === "admin" ? "admin" : "member" } };
             if (rootDomain) return { data: { ...u, role: "member" } };
@@ -100,7 +102,9 @@ export function createAuth(opts?: { demo?: boolean }) {
     baseURL: env.BETTER_AUTH_URL || undefined,
     plugins: [
       cloudflareAccess(null),
-      ...(!opts?.demo && weboxOrigin ? [weboxSso(weboxOrigin, adminWeboxId)] : []),
+      ...(!opts?.demo && tokenUrl && providerId && adminUserId
+        ? [externalSso({ tokenUrl, providerId, adminUserId })]
+        : []),
       // Must stay last: it forwards cookies the plugins above set.
       tanstackStartCookies(),
     ],

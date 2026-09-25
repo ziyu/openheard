@@ -44,7 +44,7 @@ pay for. Self-hosting is the default, not the afterthought.
 - Public board with voting, search, sorting and keyboard navigation
 - Posts with comments, reactions and a status timeline
 - Anonymous voting, sign-in gate on posting, optional approval queue
-- Sign in with Webox; public pages remain readable without an account
+- Sign in through an external SSO provider; public pages remain readable without an account
 
 **Manage**
 - Dashboard with inbox, internal notes, merge, pin, tags and ETA
@@ -80,19 +80,38 @@ Needs a Cloudflare account. Everything fits in the free tier.
 ```bash
 git clone https://github.com/Heilonng23/openheard && cd openheard
 bun install
-cp packages/infra/.env.example packages/infra/.env   # set BETTER_AUTH_SECRET
+cp packages/infra/.env.example packages/infra/.env   # set auth secret and SSO provider
 cd packages/infra && bunx alchemy login --configure && cd ../..
 bun run deploy
 ```
 
-Before deploying, configure `WEBOX_SSO_ORIGIN` and
-`WEBOX_SSO_ADMIN_USER_ID` in `packages/infra/.env` and set
-Webox's `SSO_CLIENT_CALLBACK_URL` to this site's exact
-`https://<your-openheard-host>/api/webox/callback` URL. Set the admin ID to the
-Webox user ID of the intended owner before the first sign-in; arriving first
-does not grant admin access. OpenHeard has no separate public password, magic
-link or Google login. Public boards, roadmaps and changelogs remain readable
-without signing in.
+Before deploying, set `SSO_AUTHORIZE_URL`, `SSO_TOKEN_URL`,
+`SSO_PROVIDER_ID`, and `SSO_ADMIN_USER_ID` in `packages/infra/.env`. Register
+this site's exact `https://<your-openheard-host>/api/sso/callback` URL with
+the provider. `SSO_PROVIDER_ID` is a stable namespace for account IDs; do not
+change it after users have signed in. Set the admin ID to the intended owner's
+ID from that provider before the first sign-in; arriving first does not grant
+admin access. OpenHeard has no separate public password, magic link or Google
+login. Public boards, roadmaps and changelogs remain readable without signing
+in.
+
+The external provider must support a fixed callback and a short-lived,
+single-use authorization code with PKCE S256. OpenHeard redirects to
+`SSO_AUTHORIZE_URL` with `state`, `code_challenge`, and
+`code_challenge_method=S256`; the provider returns `code` and `state` to the
+callback. OpenHeard then POSTs JSON `{ "code": "...", "code_verifier": "..." }`
+to `SSO_TOKEN_URL`. A successful response is
+`{ "user": { "id": "stable-subject", "email": "user@example.com", "name": "User" } }`.
+Both URLs must use HTTPS except on localhost or 127.0.0.1. The token endpoint
+must validate the verifier, return the identity only once, and supply a
+verified email address. This is the
+OpenHeard SSO contract; an OIDC provider needs an adapter to this contract.
+
+For Webox, use `https://<webox-host>/api/sso/authorize` and
+`https://<webox-host>/api/sso/token`, set `SSO_PROVIDER_ID=webox`, and set
+Webox's `SSO_CLIENT_CALLBACK_URL` to the OpenHeard callback above. The
+namespace `webox` preserves accounts created by the earlier Webox-specific
+fork branch.
 
 Deployment is separate from Webox. The commands above provision the Worker,
 D1 and KV, apply migrations and print the URL; run them only when you are ready

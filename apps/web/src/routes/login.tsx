@@ -5,7 +5,7 @@ import Logo from "@/components/logo";
 import { myWorkspaces } from "@/functions/admin";
 import { getUser } from "@/functions/get-user";
 import { getWorkspace } from "@/functions/workspace";
-import { safeReturnTo } from "@/lib/webox-sso";
+import { safeReturnTo } from "@/lib/external-sso";
 import { workspaceUrl } from "@/lib/workspace-url";
 
 type Search = { redirect?: string };
