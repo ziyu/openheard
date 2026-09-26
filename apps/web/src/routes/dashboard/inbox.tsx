@@ -17,6 +17,7 @@ import { REACTIONS, addComment, getPost, setEta as setEtaFn, setStatus, setTags,
 import { KIND_ICON, findStatus, useStatuses } from "@/lib/status";
 import { ago, fullDate, since } from "@/lib/time";
 import { cn } from "@openheard/ui/lib/utils";
+import { SITE_NAME } from "@/lib/site-brand";
 
 type Search = { status?: string; sort?: "new" | "top" | "old"; post?: number; board?: string; tag?: string };
 
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/dashboard/inbox")({
   }),
   loaderDeps: ({ search }) => ({ status: search.status, sort: search.sort, board: search.board, tag: search.tag }),
   loader: async ({ deps }) => ({ list: await listInbox({ data: { status: deps.status, sort: deps.sort ?? "new", board: deps.board, tag: deps.tag } }) }),
-  head: () => ({ meta: [{ title: "Posts · openheard" }] }),
+  head: () => ({ meta: [{ title: `Posts · ${SITE_NAME}` }] }),
   component: Inbox,
   errorComponent: ({ error }) => <DashboardErrorState message={(error as Error)?.message} retry="/dashboard/inbox" />,
   pendingComponent: DashboardPanelSkeleton,

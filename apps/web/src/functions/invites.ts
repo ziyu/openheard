@@ -1,23 +1,12 @@
 import { createDb, membership } from "@openheard/db";
 import { invite } from "@openheard/db/schema/feedback";
 import { createServerFn } from "@tanstack/react-start";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { assertNotDemo, assertNotDemoIdentity } from "@/lib/demo";
 import { requireAdmin, sessionMiddleware } from "@/lib/session";
 import { sendInviteEmail } from "@/lib/email";
-
-export const getWorkspaceMemberCount = createServerFn({ method: "GET" })
-  .middleware([sessionMiddleware])
-  .handler(async ({ context }) => {
-    const db = createDb();
-    const [row] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(membership)
-      .where(eq(membership.workspaceId, context.workspace.id));
-    return row.n;
-  });
 
 export const createInvite = createServerFn({ method: "POST" })
   .middleware([sessionMiddleware])

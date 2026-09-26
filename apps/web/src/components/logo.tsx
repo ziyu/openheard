@@ -2,6 +2,11 @@ import { MARK_D } from "@/components/mark-path";
 
 // The character alone, no box. Sized by height so it sits level with text next to it.
 export default function Logo({ size = 24 }: { size?: number }) {
+  const customIcon = import.meta.env.VITE_SITE_ICON_URL;
+  if (customIcon) {
+    return <img src={customIcon} alt="" width={size} height={size} className="shrink-0 object-contain" aria-hidden />;
+  }
+
   const h = size;
   const w = (h * 715) / 501;
   return (

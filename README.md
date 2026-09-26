@@ -44,7 +44,7 @@ pay for. Self-hosting is the default, not the afterthought.
 - Public board with voting, search, sorting and keyboard navigation
 - Posts with comments, reactions and a status timeline
 - Anonymous voting, sign-in gate on posting, optional approval queue
-- Sign in with Google, magic link or password
+- Sign in through an external SSO provider; public pages remain readable without an account
 
 **Manage**
 - Dashboard with inbox, internal notes, merge, pin, tags and ETA
@@ -80,29 +80,68 @@ Needs a Cloudflare account. Everything fits in the free tier.
 ```bash
 git clone https://github.com/Heilonng23/openheard && cd openheard
 bun install
-cp packages/infra/.env.example packages/infra/.env   # set BETTER_AUTH_SECRET
+cp packages/infra/.env.example packages/infra/.env   # set auth secret and SSO provider
 cd packages/infra && bunx alchemy login --configure && cd ../..
 bun run deploy
 ```
 
-That provisions the Worker, the D1 database and KV, applies migrations and
-prints your URL. The first account to sign up becomes the admin.
+For a production custom domain, set `SITE_DOMAIN` to its hostname and
+`BETTER_AUTH_URL` to its HTTPS URL, then deploy with
+`bun run --filter @openheard/infra deploy --stage prod`. The production stage
+attaches the domain and disables workers.dev URLs; other stages do not claim it.
 
-#### Behind Cloudflare Access
+Before deploying, set `SSO_AUTHORIZE_URL`, `SSO_TOKEN_URL`,
+`SSO_PROVIDER_ID`, and `SSO_ADMIN_USER_ID` in `packages/infra/.env`. Register
+this site's exact `https://<your-openheard-host>/api/sso/callback` URL with
+the provider. `SSO_PROVIDER_ID` is a stable namespace for account IDs; do not
+change it after users have signed in. Set the admin ID to the intended owner's
+ID from that provider before the first sign-in; arriving first does not grant
+admin access. OpenHeard has no separate public password, magic link or Google
+login. Public boards, roadmaps and changelogs remain readable without signing
+in.
 
-To keep a board internal, put a [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/applications/)
-application in front of it. Set these in `packages/infra/.env` and redeploy,
-and people signed in to Access (or to WARP) land in openheard already signed
-in, with no second login:
+OpenHeard uses the `openheard` session cookie prefix (`openheard-demo` for the
+demo), so local SSO testing on the same hostname does not replace the identity
+provider's session cookie.
 
-```bash
-CF_ACCESS_TEAM_DOMAIN=yourteam.cloudflareaccess.com   # Zero Trust > Settings
-CF_ACCESS_AUD=<the application's Audience (AUD) tag>  # Access application overview
-```
+The external provider must support a fixed callback and a short-lived,
+single-use authorization code with PKCE S256. OpenHeard redirects to
+`SSO_AUTHORIZE_URL` with `state`, `code_challenge`, and
+`code_challenge_method=S256`; the provider returns `code` and `state` to the
+callback. OpenHeard then POSTs JSON `{ "code": "...", "code_verifier": "..." }`
+to `SSO_TOKEN_URL`. A successful response is
+`{ "user": { "id": "stable-subject", "email": "user@example.com", "name": "User" } }`.
+Both URLs must use HTTPS except on localhost or 127.0.0.1. The token endpoint
+must validate the verifier, return the identity only once, and supply a
+verified email address. This is the
+OpenHeard SSO contract; an OIDC provider needs an adapter to this contract.
 
-The Access identity's email is matched to an existing account or creates one,
-exactly like a magic link. Signing out of openheard only lasts until the next
-page load while Access is in front; sign out of Access to leave.
+For Webox, use `https://<webox-host>/api/sso/authorize` and
+`https://<webox-host>/api/sso/token`, set `SSO_PROVIDER_ID=webox`, and set
+Webox's `SSO_CLIENT_CALLBACK_URL` to the OpenHeard callback above. The
+namespace `webox` preserves accounts created by the earlier Webox-specific
+fork branch.
+
+To use the Webox icon for this deployment, set
+`VITE_SITE_ICON_URL=/brands/webox.svg` and
+`VITE_SITE_TOUCH_ICON_URL=/brands/webox-apple-touch-icon.png` in
+`apps/web/.env` before building.
+These optional settings control the browser favicon, Apple touch icon, and
+in-app mark; without them the fork keeps OpenHeard's icons. Other projects can
+put their own SVG and PNG in `apps/web/public` and set the same paths.
+
+Set `VITE_SITE_NAME` to replace the default workspace wordmark and page titles,
+and `VITE_SITE_DOMAIN` for the workspace form's domain hint. Set
+`VITE_SITE_SOURCE_URL` to the published source of your modified deployment.
+If your own terms and privacy policy apply, set `VITE_SITE_LEGAL_BASE_URL` to
+their origin; `/terms` and `/privacy` then redirect there. These build-time
+settings live in `apps/web/.env`, so other deployments retain the OpenHeard
+defaults. For Webox Feedback, the site name is `webox feedback`, the domain is
+`feedback.we-box.io`, and the legal origin is `https://we-box.io`.
+
+Deployment is separate from Webox. The commands above provision the Worker,
+D1 and KV, apply migrations and print the URL; run them only when you are ready
+to publish the feedback service.
 
 ### Run locally
 

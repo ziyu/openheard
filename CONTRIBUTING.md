@@ -8,8 +8,12 @@ bun run db:push:local   # creates apps/web/local.db
 bun run dev:local       # http://localhost:3001
 ```
 
-Sign up once (the first account becomes admin), then `bun run db:seed` for
-demo posts.
+Set `SSO_AUTHORIZE_URL=http://127.0.0.1:7001/api/sso/authorize`,
+`SSO_TOKEN_URL=http://127.0.0.1:7001/api/sso/token`, `SSO_PROVIDER_ID=webox`,
+and `SSO_ADMIN_USER_ID=<your Webox user ID>` in `apps/web/.env`, then configure
+Webox's fixed callback as `http://localhost:3001/api/sso/callback`. Sign in
+and run `bun run db:seed` for demo posts. Other identity providers can use the
+same OpenHeard SSO contract described in the root README.
 
 ## Before you open a PR
 

@@ -1,10 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { Landing } from "@/components/landing/page";
+import { SITE_NAME } from "@/lib/site-brand";
 
 // Preview of the marketing page. In the cloud it is also served at the root
 // domain, see __root.tsx.
 export const Route = createFileRoute("/landing")({
+  beforeLoad: () => {
+    if (SITE_NAME !== "openheard") throw redirect({ to: "/" });
+  },
   head: () => {
     const title = "openheard · the open source Canny alternative";
     const description =

@@ -6,6 +6,7 @@ import Header from "../components/header";
 import { SignInDialog } from "../components/sign-in-dialog";
 
 import { getWorkspace } from "../functions/workspace";
+import { SITE_NAME } from "../lib/site-brand";
 import appCss from "../index.css?url";
 import geistLatinFont from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 
@@ -19,7 +20,7 @@ const OPENPANEL_URL = (VITE_ENV.VITE_OPENPANEL_URL ?? "https://openpanel.dev").r
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   loader: () => getWorkspace(),
   head: ({ loaderData }) => {
-    const title = loaderData ? `${loaderData.workspace.name} · feedback` : "openheard";
+    const title = loaderData?.workspace.name ?? SITE_NAME;
     const description = loaderData?.workspace.tagline ?? "Open source feedback board.";
     return {
       meta: [
@@ -28,22 +29,24 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         { title },
         { name: "description", content: description },
         { property: "og:type", content: "website" },
-        { property: "og:site_name", content: "openheard" },
+        { property: "og:site_name", content: SITE_NAME },
         { property: "og:title", content: title },
         { property: "og:description", content: description },
-        { property: "og:image", content: "https://openheard.com/og.jpg" },
-        { property: "og:image:width", content: "1200" },
-        { property: "og:image:height", content: "630" },
-        { name: "twitter:card", content: "summary_large_image" },
+        ...(SITE_NAME === "openheard" ? [
+          { property: "og:image", content: "https://openheard.com/og.jpg" },
+          { property: "og:image:width", content: "1200" },
+          { property: "og:image:height", content: "630" },
+        ] : []),
+        { name: "twitter:card", content: SITE_NAME === "openheard" ? "summary_large_image" : "summary" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
-        { name: "twitter:image", content: "https://openheard.com/og.jpg" },
+        ...(SITE_NAME === "openheard" ? [{ name: "twitter:image", content: "https://openheard.com/og.jpg" }] : []),
       ],
       links: [
       { rel: "preload", href: geistLatinFont, as: "font", type: "font/woff2", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", type: "image/svg+xml", href: VITE_ENV.VITE_SITE_ICON_URL || "/favicon.svg" },
+      { rel: "apple-touch-icon", href: VITE_ENV.VITE_SITE_TOUCH_ICON_URL || "/apple-touch-icon.png" },
     ],
     // Analytics only when a client id is set at build time, so self-hosters send nothing by default.
     scripts: OPENPANEL_CLIENT_ID

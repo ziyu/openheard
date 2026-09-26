@@ -13,8 +13,8 @@ export function isPrivatePath(pathname: string): boolean {
 
 export function hasSessionCookie(request: Request): boolean {
   const cookie = request.headers.get("cookie") ?? "";
-  // The demo uses its own cookie namespace; both mean "do not cache this".
-  return cookie.includes("better-auth.session_token") || cookie.includes("openheard-demo.session_token");
+  // Both the site and demo use namespaced Better Auth session cookies.
+  return cookie.includes(".session_token=");
 }
 
 function getCache(): Cache | null {

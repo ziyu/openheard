@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Row, SectionHead, Toggle } from "@/components/admin/panel";
 import { saveWorkspace } from "@/functions/settings";
 import { PageHead } from "@/routes/dashboard/settings";
+import { SITE_NAME } from "@/lib/site-brand";
 
 export const Route = createFileRoute("/dashboard/settings/public-board")({
   head: () => ({ meta: [{ title: "Public board · settings" }] }),
@@ -49,7 +50,7 @@ function PublicBoard() {
       <div className="pt-7">
         <SectionHead title="Footer" />
       </div>
-      <Row label="Powered by openheard" help="Small credit in the footer.">
+      <Row label={`Powered by ${SITE_NAME}`} help="Small credit in the footer.">
         <Toggle on={poweredBy} onChange={setPoweredBy} label="Powered by" />
       </Row>
       <div className="flex items-center justify-end gap-3 border-t pt-4">

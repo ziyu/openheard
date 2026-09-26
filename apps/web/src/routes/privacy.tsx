@@ -1,6 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { SITE_LEGAL_BASE_URL } from "@/lib/site-brand";
 
 export const Route = createFileRoute("/privacy")({
+  beforeLoad: () => {
+    if (SITE_LEGAL_BASE_URL) throw redirect({ href: `${SITE_LEGAL_BASE_URL}/privacy` });
+  },
   head: () => ({
     meta: [
       { title: "Privacy Policy" },

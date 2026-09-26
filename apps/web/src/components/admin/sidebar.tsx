@@ -32,6 +32,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { Collapsible } from "@/components/collapsible";
 import { KIND_ICON, useStatuses } from "@/lib/status";
 import { cn } from "@openheard/ui/lib/utils";
+import { displayWorkspaceName } from "@/lib/site-brand";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@openheard/ui/components/tooltip";
 
 const GLYPH: Record<(typeof KIND_ICON)[keyof typeof KIND_ICON], Icon> = {
@@ -71,7 +72,7 @@ function WorkspaceItems() {
     <>
       {(list ?? [{ id: root.workspace.id, name: root.workspace.name, role: "admin" }]).map((w) => (
         <DropdownMenuItem key={w.id} disabled={w.id === root.workspace.id} onClick={() => (window.location.href = workspaceUrl(w.id, root.rootDomain, "/dashboard"))}>
-          <span className="flex-1 truncate">{w.name}</span>
+          <span className="flex-1 truncate">{displayWorkspaceName(w.name)}</span>
           <span className="text-xs text-faint capitalize">{w.role}</span>
         </DropdownMenuItem>
       ))}

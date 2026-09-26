@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Webox</title>
+  <desc id="desc">A folded W formed by a blue wing, a violet wing, and a mint inner fold. Transparent background.</desc>
+  <defs>
+    <linearGradient id="blue-surface" x1="89" y1="123" x2="199" y2="375" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6081FF"/>
+      <stop offset=".48" stop-color="#4D63F5"/>
+      <stop offset="1" stop-color="#3D46EA"/>
+    </linearGradient>
+    <linearGradient id="violet-surface" x1="464" y1="144" x2="296" y2="363" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D2A1F2"/>
+      <stop offset=".4" stop-color="#AC78EC"/>
+      <stop offset="1" stop-color="#6745D7"/>
+    </linearGradient>
+    <linearGradient id="mint-fold" x1="260" y1="266" x2="326" y2="381" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#087F85"/>
+      <stop offset=".34" stop-color="#45C1B6"/>
+      <stop offset=".7" stop-color="#82DDC9"/>
+      <stop offset="1" stop-color="#AFF0DE"/>
+    </linearGradient>
+  </defs>
+  <g id="icon">
+    <path id="inner-fold" fill="url(#mint-fold)" d="M215.75 296.75
+        C240 260 250 230 280 238
+        C320 245 320 371 350.5 391.25
+        C322.5 386 280.5 351 215.75 296.75
+        Z"/>
+    <path id="right-wing" fill="url(#violet-surface)" d="M261.25 228.5
+        C306.75 191.75 359.25 146.25 397.75 128.75
+        C427.5 114.75 452 114.75 469.5 137.5
+        C483.5 156.75 483.5 177.75 474.75 204
+        C457.25 253 425.75 333.5 404.75 366.75
+        C394.25 384.25 378.5 393 361 393
+        C334.75 393 324.25 377.25 317.25 347.5
+        C312 326.5 310.25 296.75 305 274
+        C301.5 258.25 292.75 249.5 282.25 251.25
+        C275.25 244.25 268.25 235.5 261.25 228.5
+        Z"/>
+    <path id="left-wing" fill="url(#blue-surface)" d="M88 120.88
+        C109 120.88 123 129.63 144 143.63
+        C182.5 170.75 228 205.75 261.25 228.5
+        C275.25 239 289.25 249.5 296.25 258.25
+        C271.75 235.5 238.5 267 215.75 296.75
+        C193 324.75 172 352.75 156.25 370.25
+        C142.25 386 130 389.5 116 379
+        C103.75 370.25 96.75 351 86.25 326.5
+        C70.5 289.75 51.25 242.5 39 209.25
+        C21.5 165.5 37.25 132.25 72.25 123.5
+        C77.5 121.75 82.75 120.88 88 120.88
+        Z"/>
+  </g>
+</svg>

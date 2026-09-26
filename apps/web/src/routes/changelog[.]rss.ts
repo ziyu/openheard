@@ -1,5 +1,6 @@
 import { changelogEntry, createDb } from "@openheard/db";
 import { workspaceFromRequest } from "@/lib/session";
+import { displayWorkspaceName } from "@/lib/site-brand";
 import { createFileRoute } from "@tanstack/react-router";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/changelog.rss")({
           .orderBy(desc(changelogEntry.publishedAt))
           .limit(50);
         const origin = new URL(request.url).origin;
-        const name = ws?.name ?? "openheard";
+        const name = displayWorkspaceName(ws.name);
         const items = entries
           .map(
             (e) => `    <item>

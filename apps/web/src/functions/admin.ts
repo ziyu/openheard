@@ -11,7 +11,7 @@ import { z } from "zod";
 import { invalidate } from "@/lib/kv-cache";
 import { PLANS } from "@/lib/plans";
 import { DEMO_ADMIN_ID, assertNotDemo, assertNotDemoIdentity } from "@/lib/demo";
-import { requireAdmin, requireUser, sessionMiddleware } from "@/lib/session";
+import { requireAdmin, sessionMiddleware } from "@/lib/session";
 
 const DAY = 86_400_000;
 
@@ -224,7 +224,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
   .middleware([sessionMiddleware])
   .validator((d: unknown) => z.object({ name: z.string().trim().min(2).max(60), slug: z.string().trim().min(2).max(32).optional(), website: z.string().trim().url().max(200).optional().or(z.literal("")), heardAboutUs: z.string().trim().max(100).optional().or(z.literal("")), whoCanPost: z.enum(["anyone", "members"]).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const u = requireUser(context.user);
+    const u = requireAdmin(context.user);
     assertNotDemo(context.workspace);
     // The workspace guard is not enough on its own: the demo cookie also
     // reaches the apex host, where the workspace resolves to default.
