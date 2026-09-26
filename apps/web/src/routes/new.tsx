@@ -6,12 +6,13 @@ import { WorkspaceForm } from "@/components/workspace-form";
 import { createWorkspace } from "@/functions/admin";
 import { getUser } from "@/functions/get-user";
 import { workspaceUrl } from "@/lib/workspace-url";
+import { SITE_DOMAIN, SITE_NAME } from "@/lib/site-brand";
 
 export const Route = createFileRoute("/new")({
   beforeLoad: async () => {
     if ((await getUser())?.role !== "admin") throw redirect({ to: "/" });
   },
-  head: () => ({ meta: [{ title: "New workspace · openheard" }] }),
+  head: () => ({ meta: [{ title: `New workspace · ${SITE_NAME}` }] }),
   component: NewWorkspace,
 });
 
@@ -22,12 +23,12 @@ function NewWorkspace() {
   const hasExistingWorkspace = !!ownWorkspaces && ownWorkspaces.length > 0;
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 px-5 py-16">
-      <a href="/" aria-label="openheard home">
+      <a href="/" aria-label={`${SITE_NAME} home`}>
         <Logo size={32} />
       </a>
       <WorkspaceForm
         mode="create"
-        domainSuffix={rootDomain ?? "openheard.com"}
+        domainSuffix={rootDomain ?? SITE_DOMAIN}
         showHeardAbout={!hasExistingWorkspace}
         onSubmit={async (v) => {
           try {

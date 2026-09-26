@@ -42,6 +42,7 @@ import { setStatus } from "@/functions/posts";
 import { KIND_ICON, roadmapStatuses, useStatuses } from "@/lib/status";
 import type { StatusInfo } from "@/lib/status";
 import { cn } from "@openheard/ui/lib/utils";
+import { SITE_NAME } from "@/lib/site-brand";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +62,7 @@ export const Route = createFileRoute("/dashboard/roadmap")({
   loader: async ({ deps }) => {
     return listRoadmapAdmin({ data: { sort: deps.sort ?? "top", board: deps.board } });
   },
-  head: () => ({ meta: [{ title: "Roadmap · openheard" }] }),
+  head: () => ({ meta: [{ title: `Roadmap · ${SITE_NAME}` }] }),
   component: Roadmap,
   errorComponent: ({ error }) => <DashboardErrorState message={(error as Error)?.message} retry="/dashboard/roadmap" />,
   pendingComponent: DashboardPanelSkeleton,

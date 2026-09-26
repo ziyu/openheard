@@ -4,6 +4,7 @@ import { asc, count, eq } from "drizzle-orm";
 
 import { getCached, setCached } from "@/lib/kv-cache";
 import { rootDomain, sessionMiddleware } from "@/lib/session";
+import { displayWorkspaceName } from "@/lib/site-brand";
 import type { listStatuses } from "@/lib/status-db";
 
 type WorkspaceCache = {
@@ -44,7 +45,7 @@ async function fetchWorkspaceData(wsId: string): Promise<WorkspaceCache> {
 export const getWorkspace = createServerFn({ method: "GET" })
   .middleware([sessionMiddleware])
   .handler(async ({ context }) => {
-    const ws = context.workspace;
+    const ws = { ...context.workspace, name: displayWorkspaceName(context.workspace.name) };
 
     if (context.marketing) {
       const ownWorkspaces = context.user

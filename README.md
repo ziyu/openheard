@@ -130,6 +130,15 @@ These optional settings control the browser favicon, Apple touch icon, and
 in-app mark; without them the fork keeps OpenHeard's icons. Other projects can
 put their own SVG and PNG in `apps/web/public` and set the same paths.
 
+Set `VITE_SITE_NAME` to replace the default workspace wordmark and page titles,
+and `VITE_SITE_DOMAIN` for the workspace form's domain hint. Set
+`VITE_SITE_SOURCE_URL` to the published source of your modified deployment.
+If your own terms and privacy policy apply, set `VITE_SITE_LEGAL_BASE_URL` to
+their origin; `/terms` and `/privacy` then redirect there. These build-time
+settings live in `apps/web/.env`, so other deployments retain the OpenHeard
+defaults. For Webox Feedback, the site name is `webox feedback`, the domain is
+`feedback.we-box.io`, and the legal origin is `https://we-box.io`.
+
 Deployment is separate from Webox. The commands above provision the Worker,
 D1 and KV, apply migrations and print the URL; run them only when you are ready
 to publish the feedback service.

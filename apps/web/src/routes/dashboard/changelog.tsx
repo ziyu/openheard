@@ -11,6 +11,7 @@ import { deleteChangelog, listChangelog, saveChangelog } from "@/functions/chang
 import { searchPosts } from "@/functions/posts";
 import { ago, fullDate } from "@/lib/time";
 import { cn } from "@openheard/ui/lib/utils";
+import { SITE_NAME } from "@/lib/site-brand";
 
 type Entry = Awaited<ReturnType<typeof listChangelog>>[number];
 type Search = { entry?: number | "new" };
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/dashboard/changelog")({
   }),
   loaderDeps: () => ({}),
   loader: () => listChangelog(),
-  head: () => ({ meta: [{ title: "Changelog · openheard" }] }),
+  head: () => ({ meta: [{ title: `Changelog · ${SITE_NAME}` }] }),
   component: ChangelogPage,
   errorComponent: ({ error }) => <DashboardErrorState message={(error as Error)?.message} retry="/dashboard/changelog" />,
   pendingComponent: DashboardPanelSkeleton,

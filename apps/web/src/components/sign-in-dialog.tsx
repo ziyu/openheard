@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { AuthForm } from "@/components/auth-form";
 import { closeSignIn, consumePendingAction, useSignInDialog } from "@/lib/pending-action";
 import { toggleVote, addComment } from "@/functions/posts";
+import { SITE_NAME } from "@/lib/site-brand";
 
 export function SignInDialog() {
   const root = useLoaderData({ from: "__root__" });
@@ -16,7 +17,7 @@ export function SignInDialog() {
     replayPendingAction(router);
   }, [root.user, router]);
 
-  const wsName = root.workspace?.name ?? "openheard";
+  const wsName = root.workspace?.name ?? SITE_NAME;
   const callbackURL = typeof window !== "undefined" ? window.location.pathname : "/";
 
   return (
