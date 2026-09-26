@@ -26,6 +26,7 @@ export const Route = createFileRoute("/api/sso/callback")({
             asResponse: true,
           });
           if (!signedIn.ok) return new Response("SSO sign-in failed", { status: 400, headers });
+          for (const cookie of signedIn.headers.getSetCookie()) headers.append("Set-Cookie", cookie);
           headers.set("Location", safeReturnTo(pending.returnTo, request.url));
           return new Response(null, { status: 303, headers });
         } catch {

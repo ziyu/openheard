@@ -16,37 +16,41 @@ export const cache = Cloudflare.KV.Namespace("CACHE");
 
 export const email = Cloudflare.Email.SendEmail("EMAIL");
 
-export const web = Cloudflare.Website.Vite("web", {
-  rootDir: "../../apps/web",
-  placement: { region: "aws:us-west-2" },
-  compatibility: {
-    flags: ["nodejs_compat"],
-  },
-  // Wipes the public demo workspace back to its seed, 04:00 UTC.
-  crons: ["0 4 * * *"],
-  env: {
-    DB: db,
-    CACHE: cache,
-    EMAIL: email,
-    BETTER_AUTH_SECRET: Config.redacted("BETTER_AUTH_SECRET"),
-    BETTER_AUTH_URL: Config.string("BETTER_AUTH_URL").pipe(Config.withDefault("")),
-    SSO_AUTHORIZE_URL: Config.string("SSO_AUTHORIZE_URL"),
-    SSO_TOKEN_URL: Config.string("SSO_TOKEN_URL"),
-    SSO_PROVIDER_ID: Config.string("SSO_PROVIDER_ID"),
-    SSO_ADMIN_USER_ID: Config.string("SSO_ADMIN_USER_ID"),
-    ROOT_DOMAIN: Config.string("ROOT_DOMAIN").pipe(Config.withDefault("")),
-    STRIPE_SECRET_KEY: Config.string("STRIPE_SECRET_KEY").pipe(Config.withDefault("")),
-    STRIPE_WEBHOOK_SECRET: Config.string("STRIPE_WEBHOOK_SECRET").pipe(Config.withDefault("")),
-    STRIPE_PRICE_MONTHLY: Config.string("STRIPE_PRICE_MONTHLY").pipe(Config.withDefault("")),
-    STRIPE_PRICE_YEARLY: Config.string("STRIPE_PRICE_YEARLY").pipe(Config.withDefault("")),
-    // Server-side revenue tracking. Empty means no analytics call is ever made.
-    OPENPANEL_CLIENT_ID: Config.string("OPENPANEL_CLIENT_ID").pipe(Config.withDefault("")),
-    OPENPANEL_CLIENT_SECRET: Config.string("OPENPANEL_CLIENT_SECRET").pipe(Config.withDefault("")),
-    OPENPANEL_URL: Config.string("OPENPANEL_URL").pipe(Config.withDefault("")),
-  },
-  dev: {
-    port: 3001,
-  },
+export const web = Effect.gen(function* () {
+  const stage = yield* Alchemy.Stage;
+  const domain = stage === "prod" ? process.env.SITE_DOMAIN?.trim() : undefined;
+  return yield* Cloudflare.Website.Vite("web", {
+    rootDir: "../../apps/web",
+    placement: { region: "aws:us-west-2" },
+    compatibility: {
+      flags: ["nodejs_compat"],
+    },
+    domain: domain || undefined,
+    workersDev: !domain,
+    env: {
+      DB: db,
+      CACHE: cache,
+      EMAIL: email,
+      BETTER_AUTH_SECRET: Config.redacted("BETTER_AUTH_SECRET"),
+      BETTER_AUTH_URL: Config.string("BETTER_AUTH_URL").pipe(Config.withDefault("")),
+      SSO_AUTHORIZE_URL: Config.string("SSO_AUTHORIZE_URL"),
+      SSO_TOKEN_URL: Config.string("SSO_TOKEN_URL"),
+      SSO_PROVIDER_ID: Config.string("SSO_PROVIDER_ID"),
+      SSO_ADMIN_USER_ID: Config.string("SSO_ADMIN_USER_ID"),
+      ROOT_DOMAIN: Config.string("ROOT_DOMAIN").pipe(Config.withDefault("")),
+      STRIPE_SECRET_KEY: Config.string("STRIPE_SECRET_KEY").pipe(Config.withDefault("")),
+      STRIPE_WEBHOOK_SECRET: Config.string("STRIPE_WEBHOOK_SECRET").pipe(Config.withDefault("")),
+      STRIPE_PRICE_MONTHLY: Config.string("STRIPE_PRICE_MONTHLY").pipe(Config.withDefault("")),
+      STRIPE_PRICE_YEARLY: Config.string("STRIPE_PRICE_YEARLY").pipe(Config.withDefault("")),
+      // Server-side revenue tracking. Empty means no analytics call is ever made.
+      OPENPANEL_CLIENT_ID: Config.string("OPENPANEL_CLIENT_ID").pipe(Config.withDefault("")),
+      OPENPANEL_CLIENT_SECRET: Config.string("OPENPANEL_CLIENT_SECRET").pipe(Config.withDefault("")),
+      OPENPANEL_URL: Config.string("OPENPANEL_URL").pipe(Config.withDefault("")),
+    },
+    dev: {
+      port: 3001,
+    },
+  });
 });
 
 export type WebEnv = Cloudflare.InferEnv<typeof web>;

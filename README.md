@@ -85,6 +85,11 @@ cd packages/infra && bunx alchemy login --configure && cd ../..
 bun run deploy
 ```
 
+For a production custom domain, set `SITE_DOMAIN` to its hostname and
+`BETTER_AUTH_URL` to its HTTPS URL, then deploy with
+`bun run --filter @openheard/infra deploy --stage prod`. The production stage
+attaches the domain and disables workers.dev URLs; other stages do not claim it.
+
 Before deploying, set `SSO_AUTHORIZE_URL`, `SSO_TOKEN_URL`,
 `SSO_PROVIDER_ID`, and `SSO_ADMIN_USER_ID` in `packages/infra/.env`. Register
 this site's exact `https://<your-openheard-host>/api/sso/callback` URL with
