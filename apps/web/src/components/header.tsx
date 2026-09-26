@@ -7,14 +7,16 @@ import Logo from "./logo";
 import UserMenu from "./user-menu";
 import { cn } from "@openheard/ui/lib/utils";
 import { SITE_NAME } from "@/lib/site-brand";
+import { setLocale, useLocale } from "@/lib/locale";
 
 const links = [
-  { to: "/", label: "board" },
-  { to: "/roadmap", label: "roadmap" },
-  { to: "/changelog", label: "changelog" },
+  { to: "/", label: "navBoard" },
+  { to: "/roadmap", label: "navRoadmap" },
+  { to: "/changelog", label: "navChangelog" },
 ] as const;
 
 export default function Header() {
+  const { locale, t } = useLocale();
   const data = useLoaderData({ from: "__root__" });
   const { pathname } = useLocation();
   const current = pathname.startsWith("/roadmap") ? "/roadmap" : pathname.startsWith("/changelog") ? "/changelog" : "/";
@@ -54,7 +56,7 @@ export default function Header() {
                       )}
                     >
                       <span className={cn("size-[5px] rounded-full transition-colors duration-200", active ? "bg-link" : "bg-transparent group-hover/nav:bg-input")} />
-                      {label}
+                      {t(label)}
                     </Link>
                   );
                 })}
@@ -65,17 +67,20 @@ export default function Header() {
                 type="button"
                 onClick={() => setMobileSearch(true)}
                 className="inline-flex size-10 items-center justify-center rounded-md text-faint hover:bg-accent hover:text-foreground md:hidden"
-                aria-label="Search"
+                aria-label={t("searchPosts")}
               >
                 <MagnifyingGlassIcon className="size-[18px]" />
               </button>
               <Search />
+              <button type="button" onClick={() => setLocale(locale === "en" ? "zh-CN" : "en")} aria-label={t("switchLanguage")} title={t("switchLanguage")} className="rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground">
+                {locale === "en" ? "中文" : "EN"}
+              </button>
               <UserMenu />
               <button
                 type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="inline-flex size-10 items-center justify-center rounded-md text-faint hover:bg-accent hover:text-foreground lg:hidden"
-                aria-label={menuOpen ? "Close menu" : "Open menu"}
+                aria-label={t(menuOpen ? "closeMenu" : "openMenu")}
                 aria-expanded={menuOpen}
               >
                 {menuOpen ? <XIcon className="size-[18px]" /> : <ListIcon className="size-[18px]" />}
@@ -100,7 +105,7 @@ export default function Header() {
                   )}
                 >
                   <span className={cn("size-[5px] rounded-full", active ? "bg-link" : "bg-transparent")} />
-                  {label}
+                  {t(label)}
                 </Link>
               );
             })}
@@ -112,6 +117,7 @@ export default function Header() {
 }
 
 function MobileSearchBar({ onClose }: { onClose: () => void }) {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const ref = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
@@ -135,7 +141,7 @@ function MobileSearchBar({ onClose }: { onClose: () => void }) {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => e.key === "Escape" && onClose()}
-        placeholder="Search posts"
+        placeholder={t("searchPosts")}
         className="min-w-0 flex-1 bg-transparent text-[14px] text-foreground outline-none placeholder:text-faint"
       />
       <button type="button" onClick={onClose} className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-faint hover:bg-accent hover:text-foreground">
@@ -146,6 +152,7 @@ function MobileSearchBar({ onClose }: { onClose: () => void }) {
 }
 
 function Search() {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const ref = useRef<HTMLInputElement>(null);
@@ -180,7 +187,7 @@ function Search() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => e.key === "Escape" && (e.target as HTMLInputElement).blur()}
-        placeholder="Search posts"
+        placeholder={t("searchPosts")}
         className="h-8 w-[220px] rounded-lg border bg-card pr-9 pl-8 text-[13px] text-foreground outline-none transition-colors placeholder:text-faint focus:border-ring/60 focus:ring-1 focus:ring-ring/40"
       />
       <Kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2">/</Kbd>

@@ -136,8 +136,13 @@ and `VITE_SITE_DOMAIN` for the workspace form's domain hint. Set
 If your own terms and privacy policy apply, set `VITE_SITE_LEGAL_BASE_URL` to
 their origin; `/terms` and `/privacy` then redirect there. These build-time
 settings live in `apps/web/.env`, so other deployments retain the OpenHeard
-defaults. For Webox Feedback, the site name is `webox feedback`, the domain is
+defaults. For Webox Feedback, the site name is `Webox Feedback`, the domain is
 `feedback.we-box.io`, and the legal origin is `https://we-box.io`.
+
+The public board, roadmap, changelog, navigation, footer, and sign-in copy can
+switch between English and Simplified Chinese using the header language button.
+The choice is saved in the browser. Admin pages and user-authored content are
+currently shown in their original language.
 
 Deployment is separate from Webox. The commands above provision the Worker,
 D1 and KV, apply migrations and print the URL; run them only when you are ready

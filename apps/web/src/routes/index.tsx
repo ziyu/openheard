@@ -10,6 +10,7 @@ import { FeedSkeleton } from "@/components/states";
 import { VoteButton } from "@/components/vote-button";
 import { listPosts } from "@/functions/posts";
 import { openSignIn } from "@/lib/pending-action";
+import { localizedStatusLabel, useLocale } from "@/lib/locale";
 import { roadmapStatuses } from "@/lib/status";
 import { ago } from "@/lib/time";
 import { useKeyNav } from "@/lib/use-key-nav";
@@ -63,6 +64,7 @@ function IndexPage() {
 }
 
 function BoardPage() {
+  const { locale, t } = useLocale();
   const { posts, total } = Route.useLoaderData();
   const root = useLoaderData({ from: "__root__" });
   const search = Route.useSearch();
@@ -110,21 +112,21 @@ function BoardPage() {
   const rail = (
     <>
       <Button full arrow size="lg" onClick={tryCompose}>
-        Post idea
+        {t("postIdea")}
       </Button>
       <div className="flex flex-col gap-0.5">
-        <RailLabel>Boards</RailLabel>
-        <RailItem active={!search.board} to="/" search={{ ...search, board: undefined }} label="All posts" count={root.total} />
+        <RailLabel>{t("boards")}</RailLabel>
+        <RailItem active={!search.board} to="/" search={{ ...search, board: undefined }} label={t("allPosts")} count={root.total} />
         {root.boards.map((b) => (
           <RailItem key={b.id} active={search.board === b.id} to="/" search={{ ...search, board: search.board === b.id ? undefined : b.id }} label={b.name} count={b.count} />
         ))}
       </div>
       <div className="flex flex-col gap-0.5">
-        <RailLabel>Roadmap</RailLabel>
+        <RailLabel>{t("roadmap")}</RailLabel>
         {roadmapStatuses(root.statuses)
           .filter((s) => s.kind !== "review")
           .map((s) => (
-            <RailItem key={s.key} active={search.status === s.key} to="/" search={{ ...search, status: search.status === s.key ? undefined : s.key }} label={s.label} color={s.color} count={root.statusCounts[s.key] ?? 0} />
+            <RailItem key={s.key} active={search.status === s.key} to="/" search={{ ...search, status: search.status === s.key ? undefined : s.key }} label={localizedStatusLabel(s.label, locale)} color={s.color} count={root.statusCounts[s.key] ?? 0} />
           ))}
       </div>
     </>
@@ -141,7 +143,7 @@ function BoardPage() {
               onClick={() => set({ sort: s === "trending" ? undefined : s })}
               className={cn("rounded-sm text-[13px] capitalize outline-none focus-visible:ring-2 focus-visible:ring-ring/60", sort === s ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground")}
             >
-              {s}
+              {t(s)}
             </button>
           ))}
         </div>
@@ -152,7 +154,7 @@ function BoardPage() {
             </button>
           ) : null}
           <span>
-            {total} {total === 1 ? "post" : "posts"}
+            {total} {t(total === 1 ? "post" : "posts")}
           </span>
         </div>
       </div>
@@ -190,7 +192,7 @@ function BoardPage() {
                       </span>
                       <span className="inline-flex items-center gap-1.5 text-faint">
                         <Avatar name={p.author?.name ?? "?"} image={p.author?.image} size={16} />
-                        {p.author?.name ?? "someone"}
+                        {p.author?.name ?? t("someone")}
                         <span>· {ago(p.createdAt)}</span>
                       </span>
                     </div>
@@ -219,17 +221,18 @@ function BoardPage() {
 }
 
 function EmptyBoard({ filtered, onNew, onClear }: { filtered: boolean; onNew: () => void; onClear: () => void }) {
+  const { t } = useLocale();
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-      <p className="text-[14px] font-semibold">{filtered ? "Nothing matches" : "No posts yet"}</p>
-      <p className="max-w-sm text-sm text-muted-foreground">{filtered ? "Try a different filter, or post the thing you were looking for." : "The first post sets the tone. Say what you wish the product did."}</p>
+      <p className="text-[14px] font-semibold">{t(filtered ? "nothingMatches" : "noPostsYet")}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{t(filtered ? "tryDifferentFilter" : "firstPostHint")}</p>
       <div className="mt-2 flex gap-2">
         {filtered ? (
           <Button variant="secondary" onClick={onClear}>
-            Clear filters
+            {t("clearFilters")}
           </Button>
         ) : null}
-        <Button arrow onClick={onNew}>Post idea</Button>
+        <Button arrow onClick={onNew}>{t("postIdea")}</Button>
       </div>
     </div>
   );

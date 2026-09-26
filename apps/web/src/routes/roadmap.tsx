@@ -6,6 +6,7 @@ import { ErrorState, RoadmapSkeleton } from "@/components/states";
 import { VoteButton } from "@/components/vote-button";
 import { getRoadmap } from "@/functions/posts";
 import { roadmapStatuses } from "@/lib/status";
+import { localizedStatusLabel, useLocale } from "@/lib/locale";
 import { cn } from "@openheard/ui/lib/utils";
 
 export const Route = createFileRoute("/roadmap")({
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/roadmap")({
 });
 
 function RoadmapPage() {
+  const { locale, t } = useLocale();
   const posts = Route.useLoaderData();
   const root = useLoaderData({ from: "__root__" });
   const search = Route.useSearch();
@@ -40,7 +42,7 @@ function RoadmapPage() {
       {root.boards.length > 1 ? (
         <div className="flex items-center gap-[18px] text-[13px]">
           <button type="button" onClick={() => navigate({ search: { board: undefined } })} className={cn(!search.board ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground")}>
-            All boards
+            {t("allBoards")}
           </button>
           {root.boards.map((b) => (
             <button
@@ -63,10 +65,10 @@ function RoadmapPage() {
             <section key={status} className="flex min-w-0 flex-col divide-y divide-white/6">
               <header className="flex items-center gap-2 px-1 pb-3 text-[13px] font-semibold">
                 <span className="size-2 rounded-full" style={{ background: meta.color }} />
-                {meta.label}
+                {localizedStatusLabel(meta.label, locale)}
                 <span className="ml-auto font-mono text-xs font-normal text-faint">{items.length}</span>
               </header>
-              {items.length === 0 ? <p className="px-1 py-4 text-xs text-faint">Nothing here yet</p> : null}
+              {items.length === 0 ? <p className="px-1 py-4 text-xs text-faint">{t("nothingHereYet")}</p> : null}
               {items.map((p) => (
                 <Link
                   key={p.id}
