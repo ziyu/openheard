@@ -49,7 +49,8 @@ export function createAuth(opts?: { demo?: boolean }) {
       },
     },
     advanced: {
-      ...(opts?.demo ? { cookiePrefix: DEMO_COOKIE_PREFIX } : rootDomain ? { crossSubDomainCookies: { enabled: true, domain: "." + rootDomain } } : {}),
+      cookiePrefix: opts?.demo ? DEMO_COOKIE_PREFIX : "openheard",
+      ...(!opts?.demo && rootDomain ? { crossSubDomainCookies: { enabled: true, domain: "." + rootDomain } } : {}),
       ipAddress: {
         ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
       },

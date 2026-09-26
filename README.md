@@ -95,6 +95,10 @@ admin access. OpenHeard has no separate public password, magic link or Google
 login. Public boards, roadmaps and changelogs remain readable without signing
 in.
 
+OpenHeard uses the `openheard` session cookie prefix (`openheard-demo` for the
+demo), so local SSO testing on the same hostname does not replace the identity
+provider's session cookie.
+
 The external provider must support a fixed callback and a short-lived,
 single-use authorization code with PKCE S256. OpenHeard redirects to
 `SSO_AUTHORIZE_URL` with `state`, `code_challenge`, and
