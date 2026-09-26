@@ -1,5 +1,6 @@
 import { Toaster } from "@openheard/ui/components/sonner";
 import { HeadContent, Outlet, Scripts, ScrollRestoration, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import Footer from "../components/footer";
 import Header from "../components/header";
@@ -7,6 +8,7 @@ import { SignInDialog } from "../components/sign-in-dialog";
 
 import { getWorkspace } from "../functions/workspace";
 import { SITE_NAME } from "../lib/site-brand";
+import { useLocale } from "../lib/locale";
 import appCss from "../index.css?url";
 import geistLatinFont from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 
@@ -72,6 +74,8 @@ const BARE_PAGES = ["/login", "/reset-password", "/join/", "/new", "/welcome", "
 
 function RootDocument() {
   const data = Route.useLoaderData();
+  const { locale } = useLocale();
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const pathname = useRouterState({ select: (s) => (s.resolvedLocation ?? s.location).pathname });
   const admin = pathname.startsWith("/dashboard");
   // /landing previews the marketing page anywhere; on the cloud root domain
@@ -82,7 +86,7 @@ function RootDocument() {
   // Workspace accent applies to the public board only; the dashboard keeps ours.
   const accent = !admin && data?.workspace.accent ? ({ "--link": data.workspace.accent, "--ring": data.workspace.accent } as React.CSSProperties) : undefined;
   return (
-    <html lang="en" className={theme} style={accent}>
+    <html lang={locale} className={theme} style={accent}>
       <head>
         <HeadContent />
       </head>

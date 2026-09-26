@@ -1,25 +1,28 @@
 import { cn } from "@openheard/ui/lib/utils";
 
 import { findStatus, tint, useStatuses } from "@/lib/status";
+import { localizedStatusLabel, useLocale } from "@/lib/locale";
 
 // Dot + label on a 15% tint of the status colour. Used on the post page and in timelines.
 export function StatusChip({ status, className }: { status: string; className?: string }) {
+  const { locale } = useLocale();
   const m = findStatus(useStatuses(), status);
   return (
     <span className={cn("inline-flex h-[22px] items-center gap-1.5 rounded-full px-2.5 pl-2 text-xs font-semibold", className)} style={{ background: tint(m.color), color: m.color }}>
       <span className="size-[7px] rounded-full" style={{ background: m.color }} />
-      {m.label}
+      {localizedStatusLabel(m.label, locale)}
     </span>
   );
 }
 
 // Dot + muted label, for list rows.
 export function StatusLabel({ status, className }: { status: string; className?: string }) {
+  const { locale } = useLocale();
   const m = findStatus(useStatuses(), status);
   return (
     <span className={cn("inline-flex items-center gap-1.5 font-semibold", className)}>
       <span className="size-[7px] rounded-full" style={{ background: m.color }} />
-      {m.label}
+      {localizedStatusLabel(m.label, locale)}
     </span>
   );
 }

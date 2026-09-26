@@ -13,10 +13,12 @@ import { Link, useLoaderData, useRouter } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
 import { DEMO_ADMIN_ID, isDemo } from "@/lib/demo";
+import { useLocale } from "@/lib/locale";
 
 import { Avatar } from "./bits";
 
 export default function UserMenu() {
+  const { t } = useLocale();
   const router = useRouter();
   const data = useLoaderData({ from: "__root__" });
   const user = data?.user;
@@ -27,7 +29,7 @@ export default function UserMenu() {
   if (isDemo(data?.workspace) && user?.id !== DEMO_ADMIN_ID) {
     return (
       <Button variant="outline" size="sm" nativeButton={false} render={<a href="/demo" />}>
-        Open dashboard
+        {t("openDashboard")}
       </Button>
     );
   }
@@ -36,7 +38,7 @@ export default function UserMenu() {
     return (
       <Link to="/login">
         <Button variant="outline" size="sm">
-          Sign in
+          {t("signIn")}
         </Button>
       </Link>
     );
@@ -56,7 +58,7 @@ export default function UserMenu() {
           <DropdownMenuSeparator />
           {user.role === "admin" ? (
             <DropdownMenuItem render={<Link to="/dashboard/inbox" />}>
-              <GearSixIcon className="size-4" /> Dashboard
+              <GearSixIcon className="size-4" /> {t("dashboard")}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem
@@ -64,7 +66,7 @@ export default function UserMenu() {
               authClient.signOut({ fetchOptions: { onSuccess: () => router.invalidate().then(() => router.navigate({ to: "/" })) } })
             }
           >
-            Sign out
+            {t("signOut")}
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

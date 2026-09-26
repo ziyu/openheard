@@ -12,6 +12,7 @@ import { RailLabel, Shell } from "@/components/shell";
 import { ChangelogSkeleton, ErrorState } from "@/components/states";
 import { deleteChangelog, listChangelog, saveChangelog } from "@/functions/changelog";
 import { searchPosts } from "@/functions/posts";
+import { useLocale } from "@/lib/locale";
 import { cn } from "@openheard/ui/lib/utils";
 
 export const Route = createFileRoute("/changelog")({
@@ -31,11 +32,12 @@ export const Route = createFileRoute("/changelog")({
 
 type Entry = Awaited<ReturnType<typeof listChangelog>>[number];
 
-function shortDate(d: Date | string | number) {
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase();
+function shortDate(d: Date | string | number, locale: string) {
+  return new Date(d).toLocaleDateString(locale, { month: "short", day: "numeric" }).toUpperCase();
 }
 
 function ChangelogPage() {
+  const { locale, t } = useLocale();
   const entries = Route.useLoaderData();
   const root = useLoaderData({ from: "__root__" });
   const router = useRouter();
@@ -53,27 +55,27 @@ function ChangelogPage() {
         </Button>
       ) : (
         <Button full arrow size="lg" onClick={() => router.navigate({ to: "/" })}>
-          Post idea
+          {t("postIdea")}
         </Button>
       )}
       {entries.length > 0 ? (
       <section className="flex flex-col gap-2.5 px-2.5">
-        <RailLabel>Get updates</RailLabel>
-        <p className="-mt-1 text-[13px] leading-[1.5] text-muted-foreground">One email when something ships. No digest, no marketing.</p>
+        <RailLabel>{t("getUpdates")}</RailLabel>
+        <p className="-mt-1 text-[13px] leading-[1.5] text-muted-foreground">{t("updatesHint")}</p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            toast("Email updates are on the roadmap. RSS works today.");
+            toast(t("emailRoadmap"));
           }}
           className="flex h-[34px] items-center gap-1.5 rounded-lg border border-input bg-card pr-1 pl-2.5 focus-within:border-ring/60"
         >
-          <input type="email" placeholder="you@company.com" aria-label="Email address" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-faint" />
-          <button type="submit" className="inline-flex size-[26px] items-center justify-center rounded-md bg-accent text-foreground hover:bg-input" aria-label="Subscribe">
+          <input type="email" placeholder="you@company.com" aria-label={t("emailAddress")} className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-faint" />
+          <button type="submit" className="inline-flex size-[26px] items-center justify-center rounded-md bg-accent text-foreground hover:bg-input" aria-label={t("subscribe")}>
             <ArrowRightIcon weight="bold" className="size-3" />
           </button>
         </form>
         <a href="/changelog.rss" className="inline-flex items-center gap-1.5 text-xs text-faint hover:text-muted-foreground">
-          <RssIcon className="size-3.5" /> RSS feed
+          <RssIcon className="size-3.5" /> {t("rssFeed")}
         </a>
       </section>
       ) : null}
@@ -84,23 +86,23 @@ function ChangelogPage() {
     <SkeletonSwap ready={ready} skeleton={<ChangelogSkeleton />}>
     <Shell rail={rail}>
       <div className="flex items-end justify-between">
-        <h1 className="text-xl font-semibold tracking-[-0.02em]">What shipped</h1>
+        <h1 className="text-xl font-semibold tracking-[-0.02em]">{t("whatShipped")}</h1>
         <span className="font-mono text-xs text-faint">
-          {published} {published === 1 ? "release" : "releases"}
+          {published} {t(published === 1 ? "release" : "releases")}
         </span>
       </div>
 
       {entries.length === 0 ? (
         <div className="px-6 py-20 text-center">
-          <p className="text-[14px] font-semibold">Nothing shipped yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">{admin ? "Write the first entry when you release something." : "Check back after the next release."}</p>
+          <p className="text-[14px] font-semibold">{t("nothingShippedYet")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t(admin ? "writeFirstEntry" : "checkBack")}</p>
         </div>
       ) : (
         <div className="flex flex-col">
           {entries.map((e) => (
             <article key={e.id} className="flex flex-col gap-4 border-b py-7 first:pt-2 md:flex-row md:gap-8">
               <div className="flex shrink-0 items-center gap-2.5 md:w-24 md:flex-col md:items-start md:pt-1">
-                <span className="font-mono text-[12px] tracking-[0.04em] text-faint">{shortDate(e.publishedAt ?? e.createdAt)}</span>
+                <span className="font-mono text-[12px] tracking-[0.04em] text-faint">{shortDate(e.publishedAt ?? e.createdAt, locale)}</span>
                 {e.version ? <span className="inline-flex h-5 items-center rounded-md border border-input bg-secondary px-1.5 font-mono text-[12px] text-foreground">{e.version}</span> : null}
                 {!e.publishedAt ? <span className="inline-flex h-5 items-center rounded-md border border-dashed border-input px-1.5 font-mono text-[11px] text-faint">draft</span> : null}
               </div>
@@ -126,7 +128,7 @@ function ChangelogPage() {
                 {e.body ? <div className="whitespace-pre-wrap text-[14px] leading-[1.6] text-muted-foreground">{e.body}</div> : null}
                 {e.posts.length ? (
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="mr-1 font-mono text-[11px] tracking-[0.06em] text-faint uppercase">Shipped from</span>
+                    <span className="mr-1 font-mono text-[11px] tracking-[0.06em] text-faint uppercase">{t("shippedFrom")}</span>
                     {e.posts.map((p) => (
                       <Link
                         key={p.id}
