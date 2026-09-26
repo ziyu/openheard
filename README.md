@@ -113,6 +113,14 @@ Webox's `SSO_CLIENT_CALLBACK_URL` to the OpenHeard callback above. The
 namespace `webox` preserves accounts created by the earlier Webox-specific
 fork branch.
 
+To use the Webox icon for this deployment, set
+`VITE_SITE_ICON_URL=/brands/webox.svg` and
+`VITE_SITE_TOUCH_ICON_URL=/brands/webox-apple-touch-icon.png` in
+`apps/web/.env` before building.
+These optional settings control the browser favicon, Apple touch icon, and
+in-app mark; without them the fork keeps OpenHeard's icons. Other projects can
+put their own SVG and PNG in `apps/web/public` and set the same paths.
+
 Deployment is separate from Webox. The commands above provision the Worker,
 D1 and KV, apply migrations and print the URL; run them only when you are ready
 to publish the feedback service.

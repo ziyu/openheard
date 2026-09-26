@@ -42,8 +42,8 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
       links: [
       { rel: "preload", href: geistLatinFont, as: "font", type: "font/woff2", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", type: "image/svg+xml", href: VITE_ENV.VITE_SITE_ICON_URL || "/favicon.svg" },
+      { rel: "apple-touch-icon", href: VITE_ENV.VITE_SITE_TOUCH_ICON_URL || "/apple-touch-icon.png" },
     ],
     // Analytics only when a client id is set at build time, so self-hosters send nothing by default.
     scripts: OPENPANEL_CLIENT_ID
