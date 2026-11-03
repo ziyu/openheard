@@ -49,5 +49,21 @@
   "rssFeed": "RSS 订阅",
   "emailRoadmap": "邮件更新正在规划中，目前可使用 RSS 订阅。",
   "shippedFrom": "关联反馈",
-  "writeFirstEntry": "发布内容时写下第一条更新。"
+  "writeFirstEntry": "发布内容时写下第一条更新。",
+  "composeTitle": "新反馈",
+  "postTitleLabel": "反馈标题",
+  "postTitlePlaceholder": "你希望改进什么？",
+  "postDetailsLabel": "反馈详情",
+  "postDetailsPlaceholder": "你想做什么？现在有什么替代办法？",
+  "imagesComingSoon": "图片上传即将支持，暂时请粘贴链接。",
+  "similarHint": "有相似反馈 · 去投票？",
+  "postShortcut": "发布",
+  "posting": "发布中",
+  "done": "完成",
+  "tryAgain": "重试",
+  "titleRequired": "先起个标题",
+  "submittedPending": "已提交，管理员会尽快审核。",
+  "postedFirstVote": "已发布，你是第一个投票。",
+  "couldNotPost": "发布失败",
+  "boardFallback": "板块"
 }

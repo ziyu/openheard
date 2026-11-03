@@ -212,25 +212,25 @@ export function LoadingButton({
     {
       key: "idle",
       text: children,
-      tone: "text-foreground",
+      tone: "text-primary-foreground",
       icon: null,
     },
     {
       key: "pending",
       text: pendingLabel,
-      tone: "text-muted-foreground",
+      tone: "text-primary-foreground/70",
       icon: <Spinner still={reduced === true || status !== "pending"} />,
     },
     {
       key: "success",
       text: successLabel,
-      tone: "text-emerald-600 dark:text-emerald-400",
+      tone: "text-emerald-400 dark:text-emerald-700",
       icon: <CheckMark />,
     },
     {
       key: "error",
       text: errorLabel,
-      tone: "text-red-600 dark:text-red-400",
+      tone: "text-red-400 dark:text-red-600",
       icon: <AlertMark />,
     },
   ];

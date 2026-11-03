@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { createPost, searchPosts } from "@/functions/posts";
+import { useLocale } from "@/lib/locale";
 import { openSignIn } from "@/lib/pending-action";
 import { findStatus, useStatuses } from "@/lib/status";
 
@@ -57,6 +58,7 @@ export function NewPostDialog({
   const [similar, setSimilar] = useState<Similar>([]);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const statuses = useStatuses();
+  const { t } = useLocale();
   const board = boards.find((b) => b.id === boardId) ?? boards[0];
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export function NewPostDialog({
       return;
     }
     if (title.trim().length < 4) {
-      toast("Give it a title first");
+      toast(t("titleRequired"));
       return;
     }
     const postTitle = title.trim();
@@ -113,12 +115,12 @@ export function NewPostDialog({
       .then((result) => {
         onOptimisticPost?.(null);
         router.invalidate();
-        toast.success(result.pending ? "Submitted! An admin will review it shortly." : "Posted. You are the first vote.");
+        toast.success(result.pending ? t("submittedPending") : t("postedFirstVote"));
         navigate({ to: "/p/$id", params: { id: String(result.id) } });
       })
       .catch((err) => {
         onOptimisticPost?.(null);
-        toast.error(err instanceof Error ? err.message : "Could not post");
+        toast.error(err instanceof Error ? err.message : t("couldNotPost"));
       });
   }
 
@@ -133,7 +135,7 @@ export function NewPostDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showClose={false} className="max-w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-xl border-input bg-card p-0 shadow-[0_24px_64px_rgba(0,0,0,.6)] sm:max-w-[560px]">
         <div className="flex items-center justify-between pt-3.5 pr-3.5 pl-4 sm:pl-5">
-          <DialogTitle className="text-[13px] font-semibold text-muted-foreground">New post</DialogTitle>
+          <DialogTitle className="text-[13px] font-semibold text-muted-foreground">{t("composeTitle")}</DialogTitle>
           <button type="button" onClick={() => onOpenChange(false)} className="inline-flex size-10 items-center justify-center rounded-md text-faint hover:bg-accent hover:text-foreground sm:size-[26px]">
             <XIcon className="size-[13px]" />
           </button>
@@ -152,8 +154,8 @@ export function NewPostDialog({
               onKey(e);
             }}
             maxLength={140}
-            placeholder="What would make this better?"
-            aria-label="Post title"
+            placeholder={t("postTitlePlaceholder")}
+            aria-label={t("postTitleLabel")}
             className="w-full bg-transparent text-xl font-semibold tracking-[-0.02em] text-foreground outline-none placeholder:text-faint"
           />
           <textarea
@@ -162,8 +164,8 @@ export function NewPostDialog({
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={onKey}
             rows={3}
-            placeholder="What are you trying to do? Any workaround you use today?"
-            aria-label="Post details"
+            placeholder={t("postDetailsPlaceholder")}
+            aria-label={t("postDetailsLabel")}
             className="w-full resize-none bg-transparent text-[14px] leading-[1.55] text-muted-foreground outline-none placeholder:text-faint"
           />
         </div>
@@ -171,7 +173,7 @@ export function NewPostDialog({
         {similar.length ? (
           <div className="flex flex-col gap-1 px-4 pb-3 sm:px-5">
             <div className="flex items-center gap-1.5 pt-1 pb-1.5 font-mono text-[11px] tracking-[0.06em] text-faint uppercase">
-              <LightningIcon weight="fill" className="size-3 text-status-planned" /> Looks similar · vote instead?
+              <LightningIcon weight="fill" className="size-3 text-status-planned" /> {t("similarHint")}
             </div>
             {similar.slice(0, 3).map((s) => (
               <Link
@@ -206,7 +208,7 @@ export function NewPostDialog({
           <span className="inline-flex h-11 w-16 items-center justify-center rounded-md border border-dashed border-input text-faint">
             <PlusIcon className="size-3.5" />
           </span>
-          <span className="ml-1 text-xs text-faint">Images coming soon. Paste a link for now.</span>
+          <span className="ml-1 text-xs text-faint">{t("imagesComingSoon")}</span>
         </div>
 
         <div className="flex items-center justify-between border-t bg-background px-4 py-3 pr-3 sm:px-5">
@@ -214,10 +216,10 @@ export function NewPostDialog({
             <DropdownMenu>
               <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1.5 rounded-md border border-input bg-secondary pr-2 pl-2.5 text-[13px] text-foreground outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring">
                 <span className="size-1.5 rounded-full bg-link" />
-                {board?.name ?? "Board"}
+                {board?.name ?? t("boardFallback")}
                 <CaretDownIcon className="size-2.5 text-faint" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-40">
+              <DropdownMenuContent side="top" align="start" className="min-w-40">
                 {boards.map((b) => (
                   <DropdownMenuItem key={b.id} onClick={() => setBoardId(b.id)}>
                     {b.name}
@@ -226,11 +228,17 @@ export function NewPostDialog({
               </DropdownMenuContent>
             </DropdownMenu>
             <span className="hidden items-center gap-1.5 text-xs text-faint sm:inline-flex">
-              <Kbd>⌘ ↵</Kbd> to post
+              <Kbd>⌘ ↵</Kbd> {t("postShortcut")}
             </span>
           </div>
-          <LoadingButton onAction={submit} pendingLabel="Posting" onError={(err) => toast.error(err instanceof Error ? err.message : "Could not post")}>
-            Post idea
+          <LoadingButton
+            onAction={submit}
+            pendingLabel={t("posting")}
+            successLabel={t("done")}
+            errorLabel={t("tryAgain")}
+            onError={(err) => toast.error(err instanceof Error ? err.message : t("couldNotPost"))}
+          >
+            {t("postIdea")}
           </LoadingButton>
         </div>
       </DialogContent>

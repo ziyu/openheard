@@ -49,5 +49,21 @@
   "rssFeed": "RSS feed",
   "emailRoadmap": "Email updates are on the roadmap. RSS works today.",
   "shippedFrom": "Shipped from",
-  "writeFirstEntry": "Write the first entry when you release something."
+  "writeFirstEntry": "Write the first entry when you release something.",
+  "composeTitle": "New post",
+  "postTitleLabel": "Post title",
+  "postTitlePlaceholder": "What would make this better?",
+  "postDetailsLabel": "Post details",
+  "postDetailsPlaceholder": "What are you trying to do? Any workaround you use today?",
+  "imagesComingSoon": "Images coming soon. Paste a link for now.",
+  "similarHint": "Looks similar · vote instead?",
+  "postShortcut": "to post",
+  "posting": "Posting",
+  "done": "Done",
+  "tryAgain": "Try again",
+  "titleRequired": "Give it a title first",
+  "submittedPending": "Submitted! An admin will review it shortly.",
+  "postedFirstVote": "Posted. You are the first vote.",
+  "couldNotPost": "Could not post",
+  "boardFallback": "Board"
 }
