@@ -103,6 +103,25 @@ export function requestLocale(request: Request, workspaceDefault?: string | null
 
 const ctxCache = new WeakMap<Request, Promise<Ctx>>();
 
+/**
+ * A slow identity lookup must never take the whole page down: past this
+ * budget the request renders signed out and the visitor can retry, instead of
+ * waiting for the worker's global request guard.
+ */
+const SESSION_LOOKUP_MS = 4000;
+
+async function within<T>(promise: Promise<T>, ms: number, label: string): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => { timer = setTimeout(() => { console.error(`${label} exceeded ${ms}ms`); resolve(null); }, ms); }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function resolveSession(request: Request) {
   const [{ createDb, membership, workspace }, { createAuth, sessionForRequest }] = await Promise.all([import("@openheard/db"), import("@openheard/auth")]);
   const db = createDb();
@@ -115,7 +134,7 @@ async function resolveSession(request: Request) {
   const [wsResult, session] = await Promise.all([
     db.select().from(workspace).where(eq(workspace.id, slug)).limit(1),
     // Behind Cloudflare Access, the Access login is the session and outranks the cookie.
-    sessionForRequest(auth, request.headers),
+    within(sessionForRequest(auth, request.headers), SESSION_LOOKUP_MS, "session lookup"),
   ]);
 
   let [ws] = wsResult;
