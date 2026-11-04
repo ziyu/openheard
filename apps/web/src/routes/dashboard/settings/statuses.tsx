@@ -114,6 +114,16 @@ function StatusRow({
   const [kind, setKind] = useState<StatusKind>(status.kind);
   const [onRoadmap, setOnRoadmap] = useState(status.onRoadmap);
 
+  // Switching the content language re-renders this row with the other label;
+  // seeding on open keeps the form from saving the previous language's text.
+  function startEdit() {
+    setLabel(status.label);
+    setColor(status.color);
+    setKind(status.kind);
+    setOnRoadmap(status.onRoadmap);
+    setEditing(true);
+  }
+
   if (editing) {
     return (
       <form
@@ -187,7 +197,7 @@ function StatusRow({
           <DotsThreeIcon weight="bold" className="size-3.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-32">
-          <DropdownMenuItem onClick={() => setEditing(true)}>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={startEdit}>Edit</DropdownMenuItem>
           <DropdownMenuItem onClick={onDelete} className="text-destructive">
             Delete
           </DropdownMenuItem>

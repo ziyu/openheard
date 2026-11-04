@@ -115,6 +115,13 @@ function BoardRow({ board, onSave, onDelete }: { board: { id: string; name: stri
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(board.name);
   const [description, setDescription] = useState(board.description ?? "");
+  // The row can re-render with a different language while it is mounted, so
+  // the form seeds from the current values every time it opens.
+  function startEdit() {
+    setName(board.name);
+    setDescription(board.description ?? "");
+    setEditing(true);
+  }
   if (editing) {
     return (
       <form
@@ -145,7 +152,7 @@ function BoardRow({ board, onSave, onDelete }: { board: { id: string; name: stri
       <span className="text-xs text-faint tabular-nums">
         {board.count} {board.count === 1 ? "post" : "posts"}
       </span>
-      <More onEdit={() => setEditing(true)} onDelete={onDelete} />
+      <More onEdit={startEdit} onDelete={onDelete} />
     </div>
   );
 }
