@@ -8,7 +8,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { and, asc, count, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { invalidate } from "@/lib/kv-cache";
+import { invalidateWorkspace } from "@/lib/kv-cache";
 import { PLANS } from "@/lib/plans";
 import { DEMO_ADMIN_ID, assertNotDemo, assertNotDemoIdentity } from "@/lib/demo";
 import { requireAdmin, sessionMiddleware } from "@/lib/session";
@@ -171,7 +171,7 @@ export const setBoard = createServerFn({ method: "POST" })
     const [target] = await db.select({ id: board.id }).from(board).where(and(eq(board.id, data.boardId), eq(board.workspaceId, context.workspace.id))).limit(1);
     if (!target) throw new Error("Board not found");
     await db.update(post).set({ boardId: data.boardId }).where(and(eq(post.id, data.postId), eq(post.workspaceId, context.workspace.id)));
-    void invalidate(`workspace:${context.workspace.id}`);
+    void invalidateWorkspace(context.workspace.id);
     purgeWorkspaceCache(new URL(getRequest().url).origin, [data.postId]);
     return { ok: true };
   });

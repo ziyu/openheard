@@ -4,10 +4,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
-import { invalidate } from "@/lib/kv-cache";
+import { invalidateWorkspace } from "@/lib/kv-cache";
 import { requireAdmin, sessionMiddleware } from "@/lib/session";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/locale";
 import { listStatuses } from "@/lib/status-db";
-import { createDb, post, status } from "@openheard/db";
+import { createDb, post, status, statusTranslation } from "@openheard/db";
 import { and, eq, sql } from "drizzle-orm";
 
 const slug = (s: string) =>
@@ -27,6 +28,7 @@ export const saveStatus = createServerFn({ method: "POST" })
         color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
         kind: z.enum(STATUS_KINDS),
         onRoadmap: z.boolean(),
+        locale: z.string().optional(),
       })
       .parse(d),
   )
@@ -34,9 +36,25 @@ export const saveStatus = createServerFn({ method: "POST" })
     requireAdmin(context.user);
     const db = createDb();
     const ws = context.workspace.id;
+    const baseline = isLocale(context.workspace.defaultLocale) ? context.workspace.defaultLocale : DEFAULT_LOCALE;
+    const locale: Locale = isLocale(data.locale) ? data.locale : context.locale;
     if (data.key) {
-      await db.update(status).set({ label: data.label, color: data.color, kind: data.kind, onRoadmap: data.onRoadmap }).where(and(eq(status.workspaceId, ws), eq(status.key, data.key)));
-      void invalidate(`workspace:${ws}`);
+      if (locale === baseline) {
+        await db.update(status).set({ label: data.label, color: data.color, kind: data.kind, onRoadmap: data.onRoadmap }).where(and(eq(status.workspaceId, ws), eq(status.key, data.key)));
+      } else {
+        await db
+          .update(status)
+          .set({ color: data.color, kind: data.kind, onRoadmap: data.onRoadmap })
+          .where(and(eq(status.workspaceId, ws), eq(status.key, data.key)));
+        await db
+          .insert(statusTranslation)
+          .values({ workspaceId: ws, key: data.key, locale, label: data.label })
+          .onConflictDoUpdate({
+            target: [statusTranslation.workspaceId, statusTranslation.key, statusTranslation.locale],
+            set: { label: data.label },
+          });
+      }
+      void invalidateWorkspace(ws);
       purgeWorkspaceCache(new URL(getRequest().url).origin);
       return { key: data.key };
     }
@@ -44,7 +62,10 @@ export const saveStatus = createServerFn({ method: "POST" })
     let key = slug(data.label) || "status";
     if (existing.some((s) => s.key === key)) key = `${key}-${existing.length + 1}`;
     await db.insert(status).values({ workspaceId: ws, key, label: data.label, color: data.color, kind: data.kind, onRoadmap: data.onRoadmap, position: existing.length });
-    void invalidate(`workspace:${ws}`);
+    if (locale !== baseline) {
+      await db.insert(statusTranslation).values({ workspaceId: ws, key, locale, label: data.label }).onConflictDoNothing();
+    }
+    void invalidateWorkspace(ws);
     purgeWorkspaceCache(new URL(getRequest().url).origin);
     return { key };
   });
@@ -63,7 +84,7 @@ export const deleteStatus = createServerFn({ method: "POST" })
     if (!target) throw new Error("Unknown status");
     if ((target.kind === "open" || target.kind === "closed") && all.filter((s) => s.kind === target.kind).length === 1) throw new Error(`You need at least one "${target.kind}" status`);
     await db.delete(status).where(and(eq(status.workspaceId, ws), eq(status.key, data.key)));
-    void invalidate(`workspace:${ws}`);
+    void invalidateWorkspace(ws);
     purgeWorkspaceCache(new URL(getRequest().url).origin);
     return { ok: true };
   });
@@ -78,7 +99,7 @@ export const reorderStatuses = createServerFn({ method: "POST" })
     for (const [i, key] of data.keys.entries()) {
       await db.update(status).set({ position: i }).where(and(eq(status.workspaceId, ws), eq(status.key, key)));
     }
-    void invalidate(`workspace:${ws}`);
+    void invalidateWorkspace(ws);
     purgeWorkspaceCache(new URL(getRequest().url).origin);
     return { ok: true };
   });

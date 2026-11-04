@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 
@@ -43,6 +43,9 @@ export const workspace = sqliteTable("workspace", {
   anonymousVoting: integer("anonymous_voting", { mode: "boolean" }).notNull().default(false),
   showRoadmap: integer("show_roadmap", { mode: "boolean" }).notNull().default(true),
   showChangelog: integer("show_changelog", { mode: "boolean" }).notNull().default(true),
+  // Content baseline. Rows in this language live in the entity's own columns;
+  // other languages live in the matching *_translation table.
+  defaultLocale: text("default_locale").notNull().default("en"),
   // App-side default: SQLite cannot ALTER TABLE ADD a column with a function default.
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
@@ -261,6 +264,62 @@ export const changelogPost = sqliteTable(
   (t) => [primaryKey({ columns: [t.entryId, t.postId] }), uniqueIndex("changelog_post_uidx").on(t.entryId, t.postId)],
 );
 
+// Translated content. The entity's own columns hold the workspace default
+// language; a row here overrides them for one locale. Readers fall back to the
+// base columns when a locale row is missing, so a partial translation never
+// hides content.
+export const boardTranslation = sqliteTable(
+  "board_translation",
+  {
+    boardId: text("board_id")
+      .notNull()
+      .references(() => board.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+  },
+  (t) => [primaryKey({ columns: [t.boardId, t.locale] })],
+);
+
+export const tagTranslation = sqliteTable(
+  "tag_translation",
+  {
+    tagId: text("tag_id")
+      .notNull()
+      .references(() => tag.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    name: text("name").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.tagId, t.locale] })],
+);
+
+export const statusTranslation = sqliteTable(
+  "status_translation",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    key: text("key").notNull(),
+    locale: text("locale").notNull(),
+    label: text("label").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.workspaceId, t.key, t.locale] }),
+    foreignKey({ columns: [t.workspaceId, t.key], foreignColumns: [status.workspaceId, status.key] }).onDelete("cascade"),
+  ],
+);
+
+export const changelogTranslation = sqliteTable(
+  "changelog_translation",
+  {
+    entryId: integer("entry_id")
+      .notNull()
+      .references(() => changelogEntry.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+  },
+  (t) => [primaryKey({ columns: [t.entryId, t.locale] })],
+);
+
 export const workspaceRelations = relations(workspace, ({ many }) => ({ members: many(membership), boards: many(board) }));
 
 export const membershipRelations = relations(membership, ({ one }) => ({
@@ -309,7 +368,23 @@ export const inviteRelations = relations(invite, ({ one }) => ({
   workspace: one(workspace, { fields: [invite.workspaceId], references: [workspace.id] }),
 }));
 
-export const boardRelations = relations(board, ({ one, many }) => ({ workspace: one(workspace, { fields: [board.workspaceId], references: [workspace.id] }), posts: many(post) }));
+export const boardRelations = relations(board, ({ one, many }) => ({
+  workspace: one(workspace, { fields: [board.workspaceId], references: [workspace.id] }),
+  posts: many(post),
+  translations: many(boardTranslation),
+}));
+
+export const boardTranslationRelations = relations(boardTranslation, ({ one }) => ({
+  board: one(board, { fields: [boardTranslation.boardId], references: [board.id] }),
+}));
+
+export const tagTranslationRelations = relations(tagTranslation, ({ one }) => ({
+  tag: one(tag, { fields: [tagTranslation.tagId], references: [tag.id] }),
+}));
+
+export const statusTranslationRelations = relations(statusTranslation, ({ one }) => ({
+  status: one(status, { fields: [statusTranslation.workspaceId, statusTranslation.key], references: [status.workspaceId, status.key] }),
+}));
 
 export const postRelations = relations(post, ({ one, many }) => ({
   board: one(board, { fields: [post.boardId], references: [board.id] }),
@@ -353,6 +428,11 @@ export const activityRelations = relations(activity, ({ one }) => ({
 export const changelogEntryRelations = relations(changelogEntry, ({ one, many }) => ({
   author: one(user, { fields: [changelogEntry.authorId], references: [user.id] }),
   posts: many(changelogPost),
+  translations: many(changelogTranslation),
+}));
+
+export const changelogTranslationRelations = relations(changelogTranslation, ({ one }) => ({
+  entry: one(changelogEntry, { fields: [changelogTranslation.entryId], references: [changelogEntry.id] }),
 }));
 
 export const changelogPostRelations = relations(changelogPost, ({ one }) => ({

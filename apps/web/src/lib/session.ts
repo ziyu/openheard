@@ -5,6 +5,7 @@ import { createMiddleware } from "@tanstack/react-start";
 import { and, eq } from "drizzle-orm";
 
 import { DEMO_ADMIN_ID, DEMO_WORKSPACE_ID } from "./demo";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, localeFromPath, negotiateLocale, type Locale } from "./locale";
 
 export type SessionUser = { id: string; name: string; email: string; role: Role | "guest"; image?: string | null };
 export type Workspace = typeof workspace.$inferSelect;
@@ -84,7 +85,23 @@ export async function workspaceFromRequest(request: Request): Promise<Workspace 
   return ws ?? null;
 }
 
-const ctxCache = new WeakMap<Request, Promise<{ user: SessionUser | null; workspace: Workspace; marketing: boolean }>>();
+function readCookie(header: string | null | undefined, name: string): string | null {
+  const match = new RegExp(`(?:^|;\\s*)${name.replace(".", "\\.")}=([^;]+)`).exec(header ?? "");
+  return match ? decodeURIComponent(match[1]!) : null;
+}
+
+// Public pages carry the locale in the path. Everything else (dashboard, auth,
+// API) falls back to the visitor's saved choice, then the browser language,
+// then the workspace baseline.
+export function requestLocale(request: Request, workspaceDefault?: string | null): Locale {
+  const fromPath = localeFromPath(new URL(request.url).pathname);
+  if (fromPath) return fromPath;
+  const fromCookie = readCookie(request.headers.get("cookie"), LOCALE_COOKIE);
+  if (isLocale(fromCookie)) return fromCookie;
+  return negotiateLocale(request.headers.get("accept-language"), isLocale(workspaceDefault) ? workspaceDefault : DEFAULT_LOCALE);
+}
+
+const ctxCache = new WeakMap<Request, Promise<Ctx>>();
 
 async function resolveSession(request: Request) {
   const [{ createDb, membership, workspace }, { createAuth, sessionForRequest }] = await Promise.all([import("@openheard/db"), import("@openheard/auth")]);
@@ -110,10 +127,12 @@ async function resolveSession(request: Request) {
   }
   if (!ws) throw notFound();
 
+  const locale = requestLocale(request, ws.defaultLocale);
+
   // The shared demo login is nobody outside the demo, whatever memberships
   // happen to exist. One check here covers every server function at once.
   if (session && session.user.id === DEMO_ADMIN_ID && ws.id !== DEMO_WORKSPACE_ID) {
-    return { user: null, workspace: ws, marketing };
+    return { user: null, workspace: ws, marketing, locale };
   }
 
   let user: SessionUser | null = null;
@@ -125,7 +144,7 @@ async function resolveSession(request: Request) {
       .limit(1);
     user = { id: session.user.id, name: session.user.name, email: session.user.email, role: m?.role ?? "guest", image: session.user.image };
   }
-  return { user, workspace: ws, marketing };
+  return { user, workspace: ws, marketing, locale };
 }
 
 // Same resolution as sessionMiddleware, for raw route handlers.
@@ -142,7 +161,7 @@ export const sessionMiddleware = createMiddleware().server(async ({ next, reques
   return next({ context: await getSessionContext(request) });
 });
 
-export type Ctx = { user: SessionUser | null; workspace: Workspace; marketing: boolean };
+export type Ctx = { user: SessionUser | null; workspace: Workspace; marketing: boolean; locale: Locale };
 
 export function requireUser(user: SessionUser | null): SessionUser {
   if (!user) throw new Error("Sign in to do that");

@@ -1,4 +1,4 @@
-import { apiKey, board, createDb, membership, post, postTag, tag, workspace } from "@openheard/db";
+import { apiKey, board, boardTranslation, createDb, membership, post, postTag, tag, tagTranslation, workspace } from "@openheard/db";
 
 import { purgeWorkspaceCache } from "@/lib/cache";
 import { listStatuses } from "@/lib/status-db";
@@ -8,9 +8,10 @@ import { getRequest } from "@tanstack/react-start/server";
 import { and, count, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { invalidate } from "@/lib/kv-cache";
+import { invalidateWorkspace } from "@/lib/kv-cache";
 import { assertNotDemo, assertNotDemoIdentity, isDemo } from "@/lib/demo";
 import { requireAdmin, requireUser, sessionMiddleware } from "@/lib/session";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/locale";
 
 const slug = (s: string) =>
   s
@@ -59,31 +60,65 @@ export const saveWorkspace = createServerFn({ method: "POST" })
     }
     const db = createDb();
     await db.update(workspace).set(data).where(eq(workspace.id, context.workspace.id));
-    void invalidate(`workspace:${context.workspace.id}`);
+    void invalidateWorkspace(context.workspace.id);
     purgeWorkspaceCache(new URL(getRequest().url).origin);
     return { ok: true };
   });
 
 export const saveBoard = createServerFn({ method: "POST" })
   .middleware([sessionMiddleware])
-  .validator((d: unknown) => z.object({ id: z.string().optional(), name: z.string().trim().min(1).max(60), description: z.string().trim().max(200).optional() }).parse(d))
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().optional(),
+        name: z.string().trim().min(1).max(60),
+        description: z.string().trim().max(200).optional(),
+        locale: z.string().optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     requireAdmin(context.user);
     const db = createDb();
     const ws = context.workspace.id;
+    const baseline = isLocale(context.workspace.defaultLocale) ? context.workspace.defaultLocale : DEFAULT_LOCALE;
+    const locale: Locale = isLocale(data.locale) ? data.locale : context.locale;
+
     if (data.id) {
-      await db.update(board).set({ name: data.name, description: data.description ?? null }).where(and(eq(board.id, data.id), eq(board.workspaceId, ws)));
-      void invalidate(`workspace:${ws}`);
+      const [existing] = await db
+        .select({ id: board.id })
+        .from(board)
+        .where(and(eq(board.id, data.id), eq(board.workspaceId, ws)))
+        .limit(1);
+      if (!existing) throw new Error("Unknown board");
+      if (locale === baseline) {
+        await db.update(board).set({ name: data.name, description: data.description ?? null }).where(and(eq(board.id, data.id), eq(board.workspaceId, ws)));
+      } else {
+        await db
+          .insert(boardTranslation)
+          .values({ boardId: data.id, locale, name: data.name, description: data.description ?? null })
+          .onConflictDoUpdate({
+            target: [boardTranslation.boardId, boardTranslation.locale],
+            set: { name: data.name, description: data.description ?? null },
+          });
+      }
+      void invalidateWorkspace(ws);
       purgeWorkspaceCache(new URL(getRequest().url).origin);
       return { id: data.id };
     }
+
     const [{ n }] = await db.select({ n: count() }).from(board).where(eq(board.workspaceId, ws));
     // Board ids are global (they sit in URLs), so prefix outside the default workspace.
     let id = ws === "default" ? slug(data.name) : `${ws}-${slug(data.name)}`;
     if (await assertIdFree(db, board, id, ws)) id = `${id}-${n + 1}`;
     await assertIdFree(db, board, id, ws);
+    // New content always lands in the baseline columns so the id stays stable;
+    // a translated name is stored next to it when the active tab is not baseline.
     await db.insert(board).values({ id, workspaceId: ws, name: data.name, description: data.description ?? null, position: n });
-    void invalidate(`workspace:${ws}`);
+    if (locale !== baseline) {
+      await db.insert(boardTranslation).values({ boardId: id, locale, name: data.name, description: data.description ?? null });
+    }
+    void invalidateWorkspace(ws);
     purgeWorkspaceCache(new URL(getRequest().url).origin);
     return { id };
   });
@@ -97,25 +132,43 @@ export const deleteBoard = createServerFn({ method: "POST" })
     const [{ n }] = await db.select({ n: count() }).from(post).where(and(eq(post.boardId, data.id), eq(post.workspaceId, context.workspace.id)));
     if (n > 0) throw new Error(`This board has ${n} posts. Move or delete them first.`);
     await db.delete(board).where(and(eq(board.id, data.id), eq(board.workspaceId, context.workspace.id)));
-    void invalidate(`workspace:${context.workspace.id}`);
+    void invalidateWorkspace(context.workspace.id);
     purgeWorkspaceCache(new URL(getRequest().url).origin);
     return { ok: true };
   });
 
 export const saveTag = createServerFn({ method: "POST" })
   .middleware([sessionMiddleware])
-  .validator((d: unknown) => z.object({ name: z.string().trim().min(1).max(30) }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().optional(), name: z.string().trim().min(1).max(30), locale: z.string().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     requireAdmin(context.user);
     const ws = context.workspace.id;
-    const id = ws === "default" ? slug(data.name) : `${ws}-${slug(data.name)}`;
+    const baseline = isLocale(context.workspace.defaultLocale) ? context.workspace.defaultLocale : DEFAULT_LOCALE;
+    const locale: Locale = isLocale(data.locale) ? data.locale : context.locale;
     const db = createDb();
+    if (data.id) {
+      const [existing] = await db.select({ id: tag.id }).from(tag).where(and(eq(tag.id, data.id), eq(tag.workspaceId, ws))).limit(1);
+      if (!existing) throw new Error("Unknown tag");
+      if (locale === baseline) {
+        await db.update(tag).set({ name: data.name }).where(and(eq(tag.id, data.id), eq(tag.workspaceId, ws)));
+      } else {
+        await db
+          .insert(tagTranslation)
+          .values({ tagId: data.id, locale, name: data.name })
+          .onConflictDoUpdate({ target: [tagTranslation.tagId, tagTranslation.locale], set: { name: data.name } });
+      }
+      void invalidateWorkspace(ws);
+      purgeWorkspaceCache(new URL(getRequest().url).origin);
+      return { id: data.id };
+    }
+    const id = ws === "default" ? slug(data.name) : `${ws}-${slug(data.name)}`;
     await assertIdFree(db, tag, id, ws);
     await db
       .insert(tag)
       .values({ id, workspaceId: ws, name: data.name })
       .onConflictDoUpdate({ target: tag.id, set: { name: data.name }, setWhere: eq(tag.workspaceId, ws) });
-    void invalidate(`workspace:${ws}`);
+    if (locale !== baseline) await db.insert(tagTranslation).values({ tagId: id, locale, name: data.name }).onConflictDoNothing();
+    void invalidateWorkspace(ws);
     purgeWorkspaceCache(new URL(getRequest().url).origin);
     return { id };
   });
@@ -126,7 +179,7 @@ export const deleteTag = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     requireAdmin(context.user);
     await createDb().delete(tag).where(and(eq(tag.id, data.id), eq(tag.workspaceId, context.workspace.id)));
-    void invalidate(`workspace:${context.workspace.id}`);
+    void invalidateWorkspace(context.workspace.id);
     purgeWorkspaceCache(new URL(getRequest().url).origin);
     return { ok: true };
   });

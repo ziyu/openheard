@@ -7,7 +7,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { invalidate } from "@/lib/kv-cache";
+import { invalidateWorkspace } from "@/lib/kv-cache";
 import { requireAdmin, requireUser, sessionMiddleware } from "@/lib/session";
 
 function originFromRequest(): string {
@@ -221,7 +221,7 @@ export const createPost = createServerFn({ method: "POST" })
       .returning({ id: post.id });
     await db.insert(vote).values({ postId: created.id, userId: u.id });
     if (tagIds.length) await db.insert(postTag).values(tagIds.map((tagId) => ({ postId: created.id, tagId })));
-    void invalidate(`workspace:${context.workspace.id}`);
+    void invalidateWorkspace(context.workspace.id);
     purgeWorkspaceCache(originFromRequest());
     return { id: created.id, pending: initialStatus !== "open" };
   });
@@ -317,7 +317,7 @@ export const setStatus = createServerFn({ method: "POST" })
     if (!current || current.status === data.status) return { ok: true };
     await db.update(post).set({ status: data.status, statusChangedAt: new Date() }).where(eq(post.id, data.postId));
     await db.insert(activity).values({ postId: data.postId, actorId: u.id, type: "status", fromStatus: current.status, toStatus: data.status, note: data.note || null });
-    void invalidate(`workspace:${context.workspace.id}`);
+    void invalidateWorkspace(context.workspace.id);
     purgeWorkspaceCache(originFromRequest(), [data.postId]);
     return { ok: true };
   });
@@ -363,7 +363,7 @@ export const mergePosts = createServerFn({ method: "POST" })
       { postId: data.into, actorId: u.id, type: "merge", note: `merged "${source?.title}" into this, +${moved.length} votes` },
       { postId: data.from, actorId: u.id, type: "merge", note: `merged into "${target?.title}"` },
     ]);
-    void invalidate(`workspace:${context.workspace.id}`);
+    void invalidateWorkspace(context.workspace.id);
     purgeWorkspaceCache(originFromRequest(), [data.from, data.into]);
     return { ok: true, into: data.into };
   });

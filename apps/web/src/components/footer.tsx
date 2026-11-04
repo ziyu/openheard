@@ -2,7 +2,8 @@ import { useLoaderData } from "@tanstack/react-router";
 
 import { Kbd } from "./bits";
 import { SITE_LEGAL_BASE_URL, SITE_NAME, SITE_SOURCE_URL } from "@/lib/site-brand";
-import { useLocale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
+import { localePath } from "@/lib/locale";
 
 export default function Footer() {
   const { locale, t } = useLocale();
@@ -33,10 +34,10 @@ export default function Footer() {
       <a href={SITE_SOURCE_URL} className="text-faint hover:text-muted-foreground">
         {t("source")}
       </a>
-      <a href={SITE_LEGAL_BASE_URL ? `${SITE_LEGAL_BASE_URL}/privacy` : "/privacy"} className="text-faint hover:text-muted-foreground">
+      <a href={SITE_LEGAL_BASE_URL ? `${SITE_LEGAL_BASE_URL}/privacy` : localePath(locale, "/privacy")} className="text-faint hover:text-muted-foreground">
         {t("privacy")}
       </a>
-      <a href={SITE_LEGAL_BASE_URL ? `${SITE_LEGAL_BASE_URL}/terms` : "/terms"} className="text-faint hover:text-muted-foreground">
+      <a href={SITE_LEGAL_BASE_URL ? `${SITE_LEGAL_BASE_URL}/terms` : localePath(locale, "/terms")} className="text-faint hover:text-muted-foreground">
         {t("terms")}
       </a>
     </footer>

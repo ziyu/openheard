@@ -1,5 +1,5 @@
 import { Button } from "@openheard/ui/components/button";
-import { useLocale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
 
 export function AuthForm({
   wsName,

@@ -65,5 +65,7 @@
   "submittedPending": "已提交，管理员会尽快审核。",
   "postedFirstVote": "已发布，你是第一个投票。",
   "couldNotPost": "发布失败",
-  "boardFallback": "板块"
+  "boardFallback": "板块",
+  "titleRoadmap": "路线图",
+  "titleChangelog": "更新日志"
 }

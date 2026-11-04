@@ -7,19 +7,30 @@ import Logo from "./logo";
 import UserMenu from "./user-menu";
 import { cn } from "@openheard/ui/lib/utils";
 import { SITE_NAME } from "@/lib/site-brand";
-import { setLocale, useLocale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
+import { LOCALE_COOKIE, localeHref, stripLocale } from "@/lib/locale";
 
 const links = [
-  { to: "/", label: "navBoard" },
-  { to: "/roadmap", label: "navRoadmap" },
-  { to: "/changelog", label: "navChangelog" },
+  { to: "/$locale", bare: "/", label: "navBoard" },
+  { to: "/$locale/roadmap", bare: "/roadmap", label: "navRoadmap" },
+  { to: "/$locale/changelog", bare: "/changelog", label: "navChangelog" },
 ] as const;
 
 export default function Header() {
   const { locale, t } = useLocale();
   const data = useLoaderData({ from: "__root__" });
-  const { pathname } = useLocation();
-  const current = pathname.startsWith("/roadmap") ? "/roadmap" : pathname.startsWith("/changelog") ? "/changelog" : "/";
+  const { pathname, searchStr, hash } = useLocation();
+  const barePath = stripLocale(pathname);
+  const current = barePath.startsWith("/roadmap") ? "/roadmap" : barePath.startsWith("/changelog") ? "/changelog" : "/";
+  const other = locale === "en" ? "zh-CN" : "en";
+
+  // Public pages move the URL; the cookie keeps dashboard/auth pages in sync.
+  function switchLocale() {
+    document.cookie = `${LOCALE_COOKIE}=${other}; path=/; max-age=31536000; samesite=lax`;
+    // A locale switch is a document navigation: the server renders the whole
+    // page in the other language, hreflang included.
+    window.location.assign(localeHref(pathname, searchStr, hash, other));
+  }
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileSearch, setMobileSearch] = useState(false);
 
@@ -28,7 +39,7 @@ export default function Header() {
     setMobileSearch(false);
   }, [pathname]);
 
-  const visibleLinks = links.filter(({ to }) => (to === "/roadmap" ? data?.workspace.showRoadmap !== false : to === "/changelog" ? data?.workspace.showChangelog !== false : true));
+  const visibleLinks = links.filter(({ bare }) => (bare === "/roadmap" ? data?.workspace.showRoadmap !== false : bare === "/changelog" ? data?.workspace.showChangelog !== false : true));
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur-[2px]">
@@ -38,18 +49,19 @@ export default function Header() {
         ) : (
           <>
             <div className="flex h-full items-center gap-3 md:gap-4">
-              <Link to="/" className="flex items-center gap-2.5 text-[14px] font-semibold tracking-[-0.01em] text-foreground">
+              <Link to="/$locale" params={{ locale }} className="flex items-center gap-2.5 text-[14px] font-semibold tracking-[-0.01em] text-foreground">
                 <Logo />
                 <span className="hidden sm:inline">{data?.workspace.name ?? SITE_NAME}</span>
               </Link>
               <span className="hidden h-4 w-px bg-input lg:block" aria-hidden />
               <nav className="hidden h-full items-center gap-0.5 lg:flex">
-                {visibleLinks.map(({ to, label }) => {
-                  const active = current === to;
+                {visibleLinks.map(({ to, bare, label }) => {
+                  const active = current === bare;
                   return (
                     <Link
                       key={to}
                       to={to}
+                      params={{ locale }}
                       className={cn(
                         "group/nav inline-flex h-8 items-center gap-[7px] rounded-md px-2.5 font-mono text-[13px] font-medium transition-colors duration-150 hover:bg-accent/60",
                         active ? "text-foreground" : "text-faint hover:text-muted-foreground",
@@ -72,7 +84,7 @@ export default function Header() {
                 <MagnifyingGlassIcon className="size-[18px]" />
               </button>
               <Search />
-              <button type="button" onClick={() => setLocale(locale === "en" ? "zh-CN" : "en")} aria-label={t("switchLanguage")} title={t("switchLanguage")} className="rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground">
+              <button type="button" onClick={() => switchLocale()} aria-label={t("switchLanguage")} title={t("switchLanguage")} className="rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground">
                 {locale === "en" ? "中文" : "EN"}
               </button>
               <UserMenu />
@@ -92,12 +104,13 @@ export default function Header() {
       {menuOpen && !mobileSearch ? (
         <nav className="border-t bg-background lg:hidden">
           <div className="mx-auto flex max-w-[1072px] flex-col px-4 py-2 md:px-8">
-            {visibleLinks.map(({ to, label }) => {
-              const active = current === to;
+            {visibleLinks.map(({ to, bare, label }) => {
+              const active = current === bare;
               return (
                 <Link
                   key={to}
                   to={to}
+                  params={{ locale }}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
                     "flex h-11 items-center gap-[7px] rounded-md px-2.5 font-mono text-[14px] font-medium transition-colors duration-150",
@@ -117,7 +130,7 @@ export default function Header() {
 }
 
 function MobileSearchBar({ onClose }: { onClose: () => void }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const navigate = useNavigate();
   const ref = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
@@ -131,7 +144,7 @@ function MobileSearchBar({ onClose }: { onClose: () => void }) {
       className="flex w-full items-center gap-3"
       onSubmit={(e) => {
         e.preventDefault();
-        navigate({ to: "/", search: q ? { q } : {} });
+        navigate({ to: "/$locale", params: { locale }, search: q ? { q } : {} });
         onClose();
       }}
     >
@@ -152,7 +165,7 @@ function MobileSearchBar({ onClose }: { onClose: () => void }) {
 }
 
 function Search() {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const ref = useRef<HTMLInputElement>(null);
@@ -178,7 +191,7 @@ function Search() {
       className="relative hidden md:block"
       onSubmit={(e) => {
         e.preventDefault();
-        navigate({ to: "/", search: q ? { q } : {} });
+        navigate({ to: "/$locale", params: { locale }, search: q ? { q } : {} });
       }}
     >
       <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-2.5 size-[14px] -translate-y-1/2 text-faint" />

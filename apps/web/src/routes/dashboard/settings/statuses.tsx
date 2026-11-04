@@ -7,6 +7,7 @@ import { createFileRoute, useLoaderData, useRouter } from "@tanstack/react-route
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { LocaleTabs } from "@/components/admin/locale-tabs";
 import { SectionHead, Toggle } from "@/components/admin/panel";
 import { deleteStatus, reorderStatuses, saveStatus } from "@/functions/statuses";
 import { KIND_LABEL } from "@/lib/status";
@@ -48,6 +49,8 @@ function Statuses() {
   return (
     <>
       <PageHead title="Statuses" sub="Where a post can be. The order here is the order on the roadmap and the timeline." />
+
+      <LocaleTabs baseline={root.workspace.defaultLocale} missing={root.statuses.filter((s) => !s.translated).length} />
       <SectionHead
         title="Statuses"
         right={

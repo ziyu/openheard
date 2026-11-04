@@ -1,52 +1,63 @@
-import { useSyncExternalStore } from "react";
-
 import en from "@/messages/en.json";
 import zhCN from "@/messages/zh-CN.json";
 
-export type Locale = "en" | "zh-CN";
-type MessageKey = keyof typeof en;
+export const SUPPORTED_LOCALES = ["en", "zh-CN"] as const;
+export type Locale = (typeof SUPPORTED_LOCALES)[number];
+export const DEFAULT_LOCALE: Locale = "en";
+export type MessageKey = keyof typeof en;
 
-const STORAGE_KEY = "feedback.locale";
-const CHANGE_EVENT = "feedback:locale-change";
 const messages: Record<Locale, Record<MessageKey, string>> = { en, "zh-CN": zhCN };
 
-export function selectLocale(saved: string | null, browserLanguage: string): Locale {
-  if (saved === "en" || saved === "zh-CN") return saved;
-  return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en";
+/** Cookie keeps a visitor's choice for unprefixed surfaces (dashboard, auth). */
+export const LOCALE_COOKIE = "feedback.locale";
+
+export function isLocale(value: unknown): value is Locale {
+  return typeof value === "string" && (SUPPORTED_LOCALES as readonly string[]).includes(value);
 }
 
-function currentLocale(): Locale {
-  return selectLocale(window.localStorage.getItem(STORAGE_KEY), window.navigator.language);
+/** Narrow an untrusted value, falling back to the default locale. */
+export function asLocale(value: unknown): Locale {
+  return isLocale(value) ? value : DEFAULT_LOCALE;
 }
 
-function subscribe(listener: () => void) {
-  window.addEventListener("storage", listener);
-  window.addEventListener(CHANGE_EVENT, listener);
-  return () => {
-    window.removeEventListener("storage", listener);
-    window.removeEventListener(CHANGE_EVENT, listener);
-  };
+/** First supported locale tag wins; region tags map onto the base language. */
+export function negotiateLocale(acceptLanguage: string | null | undefined, fallback: Locale = DEFAULT_LOCALE): Locale {
+  for (const part of (acceptLanguage ?? "").split(",")) {
+    const tag = part.split(";")[0]!.trim().toLowerCase();
+    if (!tag) continue;
+    if (tag === "zh" || tag.startsWith("zh-")) return "zh-CN";
+    if (tag === "en" || tag.startsWith("en-")) return "en";
+  }
+  return fallback;
 }
 
-export function setLocale(locale: Locale) {
-  window.localStorage.setItem(STORAGE_KEY, locale);
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+/** The locale a path carries, if any. Public pages are its only source. */
+export function localeFromPath(pathname: string): Locale | null {
+  const first = pathname.split("?")[0]!.split("/")[1] ?? "";
+  return isLocale(first) ? first : null;
 }
 
-export function useLocale() {
-  const locale = useSyncExternalStore(subscribe, currentLocale, () => "en" as Locale);
-  return { locale, t: (key: MessageKey) => messages[locale][key] };
+/** Absolute path for a public page in one locale. */
+export function localePath(locale: Locale, path: string): string {
+  const clean = path === "/" || path === "" ? "" : path.startsWith("/") ? path : `/${path}`;
+  return `/${locale}${clean}`;
 }
 
-const defaultStatusLabels: Record<string, string> = {
-  Pending: "待处理",
-  "Under review": "审核中",
-  Planned: "已规划",
-  "In progress": "进行中",
-  Shipped: "已发布",
-  Closed: "已关闭",
-};
+/** The path with its locale prefix removed, for layout decisions. */
+export function stripLocale(pathname: string): string {
+  const locale = localeFromPath(pathname);
+  if (!locale) return pathname;
+  const rest = pathname.slice(locale.length + 1);
+  return rest.startsWith("/") ? rest || "/" : `/${rest}`;
+}
 
-export function localizedStatusLabel(label: string, locale: Locale): string {
-  return locale === "zh-CN" ? defaultStatusLabels[label] ?? label : label;
+/** The same page in another locale, search and hash preserved. */
+export function localeHref(pathname: string, search: string, hash: string, target: Locale): string {
+  const current = localeFromPath(pathname);
+  const rest = pathname.split("/").filter(Boolean).slice(current ? 1 : 0).join("/");
+  return `/${target}${rest ? `/${rest}` : ""}${search}${hash}`;
+}
+
+export function translate(locale: Locale, key: MessageKey): string {
+  return messages[locale][key] ?? messages[DEFAULT_LOCALE][key];
 }

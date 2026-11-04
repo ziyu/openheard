@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { createPost, searchPosts } from "@/functions/posts";
-import { useLocale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
 import { openSignIn } from "@/lib/pending-action";
 import { findStatus, useStatuses } from "@/lib/status";
 
@@ -58,7 +58,7 @@ export function NewPostDialog({
   const [similar, setSimilar] = useState<Similar>([]);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const statuses = useStatuses();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const board = boards.find((b) => b.id === boardId) ?? boards[0];
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export function NewPostDialog({
         onOptimisticPost?.(null);
         router.invalidate();
         toast.success(result.pending ? t("submittedPending") : t("postedFirstVote"));
-        navigate({ to: "/p/$id", params: { id: String(result.id) } });
+        navigate({ to: "/$locale/p/$id", params: { locale, id: String(result.id) } });
       })
       .catch((err) => {
         onOptimisticPost?.(null);
@@ -178,8 +178,8 @@ export function NewPostDialog({
             {similar.slice(0, 3).map((s) => (
               <Link
                 key={s.id}
-                to="/p/$id"
-                params={{ id: String(s.id) }}
+                to="/$locale/p/$id"
+                params={{ locale, id: String(s.id) }}
                 onClick={() => onOpenChange(false)}
                 className="flex min-h-11 items-center gap-2.5 rounded-lg bg-secondary px-2 py-2 text-[13px] transition-colors hover:bg-accent"
               >

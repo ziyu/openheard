@@ -13,7 +13,7 @@ import { Link, useLoaderData, useRouter } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
 import { DEMO_ADMIN_ID, isDemo } from "@/lib/demo";
-import { useLocale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
 
 import { Avatar } from "./bits";
 

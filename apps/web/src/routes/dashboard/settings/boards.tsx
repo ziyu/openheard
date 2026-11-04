@@ -4,6 +4,7 @@ import { createFileRoute, useLoaderData, useRouter } from "@tanstack/react-route
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { LocaleTabs } from "@/components/admin/locale-tabs";
 import { SectionHead } from "@/components/admin/panel";
 import { deleteBoard, deleteTag, saveBoard, saveTag } from "@/functions/settings";
 import { PageHead } from "@/routes/dashboard/settings";
@@ -18,6 +19,7 @@ const input = "h-8 rounded-lg border border-input bg-card px-2.5 text-[13px] out
 
 function Boards() {
   const root = useLoaderData({ from: "__root__" });
+  const missing = root.boards.filter((b) => !b.translated).length;
   const router = useRouter();
   const [newBoard, setNewBoard] = useState<{ name: string; description: string } | null>(null);
   const [newTag, setNewTag] = useState<string | null>(null);
@@ -35,6 +37,8 @@ function Boards() {
   return (
     <>
       <PageHead title="Boards & tags" sub="Boards group posts. Tags cut across them." />
+
+      <LocaleTabs baseline={root.workspace.defaultLocale} missing={missing} />
 
       <SectionHead
         title="Boards"

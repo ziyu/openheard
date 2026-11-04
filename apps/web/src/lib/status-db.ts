@@ -1,4 +1,4 @@
-import { DEFAULT_STATUSES, status } from "@openheard/db";
+import { DEFAULT_STATUSES, status, statusTranslation } from "@openheard/db";
 import type { Db } from "@openheard/db";
 import type { STATUS_KINDS } from "@openheard/db/schema/feedback";
 import { and, asc, eq } from "drizzle-orm";
@@ -11,10 +11,25 @@ export async function listStatuses(db: Db, workspaceId: string) {
   return db.select().from(status).where(eq(status.workspaceId, workspaceId)).orderBy(asc(status.position));
 }
 
+// The built-in Chinese labels ship as translations, not as a hardcoded map in
+// the UI, so an admin can rename them like any other status.
+const DEFAULT_LABELS_ZH: Record<string, string> = {
+  open: "待处理",
+  review: "审核中",
+  planned: "已规划",
+  progress: "进行中",
+  done: "已发布",
+  closed: "已关闭",
+};
+
 export async function seedStatuses(db: Db, workspaceId: string) {
   await db
     .insert(status)
     .values(DEFAULT_STATUSES.map((d, i) => ({ workspaceId, ...d, position: i })))
+    .onConflictDoNothing();
+  await db
+    .insert(statusTranslation)
+    .values(DEFAULT_STATUSES.map((d) => ({ workspaceId, key: d.key, locale: "zh-CN", label: DEFAULT_LABELS_ZH[d.key] ?? d.label })))
     .onConflictDoNothing();
 }
 

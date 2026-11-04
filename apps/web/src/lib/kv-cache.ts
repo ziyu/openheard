@@ -1,5 +1,7 @@
 import { env } from "@openheard/env/server";
 
+import { SUPPORTED_LOCALES } from "./locale";
+
 type KV = { get(key: string, opts?: { type: "json" }): Promise<unknown>; put(key: string, value: string, opts?: { expirationTtl: number }): Promise<void>; delete(key: string): Promise<void> };
 
 function kv(): KV | null {
@@ -32,4 +34,9 @@ export async function invalidate(...keys: string[]): Promise<void> {
   const store = kv();
   if (!store) return;
   await Promise.all(keys.map((k) => store.delete(k).catch(() => {})));
+}
+
+/** Workspace data is cached per locale, so every write clears all of them. */
+export async function invalidateWorkspace(wsId: string): Promise<void> {
+  await invalidate(...SUPPORTED_LOCALES.map((locale) => `workspace:${wsId}:${locale}`));
 }

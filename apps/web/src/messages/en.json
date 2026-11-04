@@ -65,5 +65,7 @@
   "submittedPending": "Submitted! An admin will review it shortly.",
   "postedFirstVote": "Posted. You are the first vote.",
   "couldNotPost": "Could not post",
-  "boardFallback": "Board"
+  "boardFallback": "Board",
+  "titleRoadmap": "Roadmap",
+  "titleChangelog": "Changelog"
 }

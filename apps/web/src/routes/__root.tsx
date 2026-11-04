@@ -1,6 +1,5 @@
 import { Toaster } from "@openheard/ui/components/sonner";
 import { HeadContent, Outlet, Scripts, ScrollRestoration, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
 
 import Footer from "../components/footer";
 import Header from "../components/header";
@@ -8,7 +7,8 @@ import { SignInDialog } from "../components/sign-in-dialog";
 
 import { getWorkspace } from "../functions/workspace";
 import { SITE_NAME } from "../lib/site-brand";
-import { useLocale } from "../lib/locale";
+import { LocaleProvider } from "@/lib/locale-react";
+import { DEFAULT_LOCALE, stripLocale } from "@/lib/locale";
 import appCss from "../index.css?url";
 import geistLatinFont from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 
@@ -74,9 +74,11 @@ const BARE_PAGES = ["/login", "/reset-password", "/join/", "/new", "/welcome", "
 
 function RootDocument() {
   const data = Route.useLoaderData();
-  const { locale } = useLocale();
-  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
-  const pathname = useRouterState({ select: (s) => (s.resolvedLocation ?? s.location).pathname });
+  // Server-resolved: the public page's path locale, else the saved choice, else
+  // the browser language. Rendering it here keeps SSR and hydration identical.
+  const locale = data?.locale ?? DEFAULT_LOCALE;
+  const rawPathname = useRouterState({ select: (s) => (s.resolvedLocation ?? s.location).pathname });
+  const pathname = stripLocale(rawPathname);
   const admin = pathname.startsWith("/dashboard");
   // /landing previews the marketing page anywhere; on the cloud root domain
   // the marketing page is the home page.
@@ -91,6 +93,7 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body>
+        <LocaleProvider locale={locale}>
         {admin ? (
           <div className="h-dvh overflow-hidden">
             <Outlet />
@@ -112,6 +115,7 @@ function RootDocument() {
         )}
         <SignInDialog />
         <Toaster position="bottom-right" />
+        </LocaleProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
