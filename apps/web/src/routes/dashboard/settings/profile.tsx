@@ -44,7 +44,7 @@ function Profile() {
       </Row>
       <div className="flex items-center justify-end gap-3 border-t pt-4">
         <span className="text-xs text-faint">{dirty ? t("dash.billing.unsavedChanges") : t("dash.billing.saved")}</span>
-        <LoadingButton onAction={save} disabled={!dirty} successLabel={t("dash.billing.saved")} onError={(err) => toast.error(err instanceof Error ? err.message : t("dash.billing.couldNotSave"))}>
+        <LoadingButton onAction={save} disabled={!dirty} errorLabel={t("dash.shell.tryAgain")} successLabel={t("dash.billing.saved")} onError={(err) => toast.error(err instanceof Error ? err.message : t("dash.billing.couldNotSave"))}>
           {t("dash.billing.save")}
         </LoadingButton>
       </div>

@@ -33,10 +33,10 @@ function SettingsLayout() {
   const groups = SETTINGS_NAV.map((g) => ({ group: g.group, items: g.items.filter(([slug]) => !locked.includes(slug)) })).filter((g) => g.items.length > 0);
   const onLocked = locked.some((slug) => pathname === `/dashboard/settings/${slug}`);
   return (
-    <Panel title="Settings" className="flex flex-col md:flex-row">
+    <Panel title={t("dash.shell.settings")} className="flex flex-col md:flex-row">
       <nav className="flex shrink-0 flex-row gap-1 overflow-x-auto border-b px-3 py-2 md:w-[220px] md:flex-col md:overflow-x-visible md:border-r md:border-b-0 md:pt-3 md:pb-4">
         <Link to="/dashboard" className="hidden h-[30px] items-center gap-2 rounded-md px-2 text-sm font-semibold hover:bg-accent/60 md:flex">
-          <ArrowLeftIcon className="size-[13px] text-faint" /> Settings
+          <ArrowLeftIcon className="size-[13px] text-faint" /> {t("dash.shell.settings")}
         </Link>
         {groups.map((g) => (
           <div key={g.group} className="flex flex-row gap-0.5 md:flex-col md:pt-3.5">

@@ -46,7 +46,7 @@ function General() {
       </Row>
       <div className="flex items-center justify-end gap-3 border-t pt-4">
         <span className="text-xs text-faint">{dirty ? t("dash.workspace.unsaved") : t("dash.workspace.saved")}</span>
-        <LoadingButton onAction={save} disabled={!dirty} successLabel={t("dash.workspace.saved")} onError={(err) => toast.error(err instanceof Error ? err.message : t("dash.workspace.couldNotSave"))}>
+        <LoadingButton onAction={save} disabled={!dirty} errorLabel={t("dash.shell.tryAgain")} successLabel={t("dash.workspace.saved")} onError={(err) => toast.error(err instanceof Error ? err.message : t("dash.workspace.couldNotSave"))}>
           {t("dash.workspace.save")}
         </LoadingButton>
       </div>
