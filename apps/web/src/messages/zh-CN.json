@@ -130,5 +130,13 @@
   "post.etaNotSet": "未设置",
   "postAdmin.manageInDashboard": "在控制台管理 →",
   "postAdmin.save": "保存",
-  "post.copyFailed": "复制失败"
+  "post.copyFailed": "复制失败",
+  "attachment.add": "添加附件",
+  "attachment.hint": "图片、PDF、文本或短视频，最多 4 个，每个不超过 5 MB。",
+  "attachment.uploading": "上传中…",
+  "attachment.tooLarge": "单个文件不能超过 5 MB。",
+  "attachment.limit": "每条反馈最多 4 个附件。",
+  "attachment.failed": "上传失败，请重试。",
+  "attachment.remove": "移除附件",
+  "post.attachments": "附件"
 }

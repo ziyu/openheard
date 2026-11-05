@@ -1,4 +1,4 @@
-import { activity, anonymousVote, board, comment, commentReaction, createDb, post, postTag, postTranslation, status, tag, vote } from "@openheard/db";
+import { activity, anonymousVote, attachment, board, comment, commentReaction, createDb, post, postTag, postTranslation, status, tag, vote } from "@openheard/db";
 
 import { purgeWorkspaceCache } from "@/lib/cache";
 import { assertStatus, listStatuses, statusOfKind } from "@/lib/status-db";
@@ -179,6 +179,10 @@ export const getPost = createServerFn({ method: "GET" })
     const voted = context.user
       ? (await db.select({ userId: vote.userId }).from(vote).where(and(eq(vote.postId, p.id), eq(vote.userId, context.user.id)))).length > 0
       : false;
+    const files = await db
+      .select({ id: attachment.id, filename: attachment.filename, contentType: attachment.contentType, sizeBytes: attachment.sizeBytes })
+      .from(attachment)
+      .where(and(eq(attachment.postId, p.id), eq(attachment.state, "ready")));
     // Merge candidates: same board, shares a word of 5+ letters with the title.
     const words = p.title.toLowerCase().match(/[a-z]{5,}/g) ?? [];
     const similar = words.length
@@ -204,6 +208,7 @@ export const getPost = createServerFn({ method: "GET" })
       title: translation?.title ?? p.title,
       body: translation?.body ?? p.body,
       translated: !!translation,
+      attachments: files,
       tags: p.tags.map((t) => t.tag),
       voted,
       similar: similar.map((s) => ({ ...s, title: titleOf(s.id, s.title) })),
@@ -283,6 +288,7 @@ export const createPost = createServerFn({ method: "POST" })
         title: z.string().trim().min(4, "Give it a title").max(140),
         body: z.string().trim().max(5000).default(""),
         tags: z.array(z.string()).max(5).default([]),
+        attachmentIds: z.array(z.string().uuid()).max(4).default([]),
       })
       .parse(d),
   )
@@ -303,6 +309,19 @@ export const createPost = createServerFn({ method: "POST" })
       .returning({ id: post.id });
     await db.insert(vote).values({ postId: created.id, userId: u.id });
     if (tagIds.length) await db.insert(postTag).values(tagIds.map((tagId) => ({ postId: created.id, tagId })));
+    if (data.attachmentIds.length) {
+      // Only this uploader's unbound files can join the new post.
+      await db
+        .update(attachment)
+        .set({ postId: created.id })
+        .where(and(
+          inArray(attachment.id, data.attachmentIds),
+          eq(attachment.workspaceId, context.workspace.id),
+          eq(attachment.uploaderId, u.id),
+          sql`${attachment.postId} is null`,
+          sql`${attachment.commentId} is null`,
+        ));
+    }
     void invalidateWorkspace(context.workspace.id);
     purgeWorkspaceCache(originFromRequest());
     return { id: created.id, pending: initialStatus !== "open" };

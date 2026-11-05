@@ -130,5 +130,13 @@
   "post.etaNotSet": "not set",
   "postAdmin.manageInDashboard": "manage in dashboard →",
   "postAdmin.save": "Save",
-  "post.copyFailed": "Failed"
+  "post.copyFailed": "Failed",
+  "attachment.add": "Add files",
+  "attachment.hint": "Images, PDF, text or a short video — up to 4 files, 5 MB each.",
+  "attachment.uploading": "Uploading…",
+  "attachment.tooLarge": "Files must be 5 MB or smaller.",
+  "attachment.limit": "Up to 4 files per post.",
+  "attachment.failed": "Upload failed. Try again.",
+  "attachment.remove": "Remove file",
+  "post.attachments": "Attachments"
 }

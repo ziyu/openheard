@@ -14,6 +14,10 @@ export const db = Cloudflare.D1.Database("database", {
 
 export const cache = Cloudflare.KV.Namespace("CACHE");
 
+// Files attached to posts and comments. Sinecloud binds its own bucket with the
+// same binding name in the generated wrangler config.
+export const attachments = Cloudflare.R2.Bucket("ATTACHMENTS");
+
 export const email = Cloudflare.Email.SendEmail("EMAIL");
 
 export const web = Effect.gen(function* () {
@@ -30,6 +34,7 @@ export const web = Effect.gen(function* () {
     env: {
       DB: db,
       CACHE: cache,
+      ATTACHMENTS: attachments,
       EMAIL: email,
       BETTER_AUTH_SECRET: Config.redacted("BETTER_AUTH_SECRET"),
       BETTER_AUTH_URL: Config.string("BETTER_AUTH_URL").pipe(Config.withDefault("")),

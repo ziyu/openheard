@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogTitle } from "@openheard/ui/components/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@openheard/ui/components/dropdown-menu";
-import { CaretDownIcon, ImageIcon, LightningIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, ImageIcon, LightningIcon, PaperclipIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -54,6 +54,10 @@ export function NewPostDialog({
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [files, setFiles] = useState<{ id: string; url: string; contentType: string; filename: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [boardId, setBoardId] = useState(defaultBoard ?? boards[0]?.id ?? "");
   const [similar, setSimilar] = useState<Similar>([]);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -71,6 +75,37 @@ export function NewPostDialog({
     const t = setTimeout(() => searchPosts({ data: { q } }).then(setSimilar).catch(() => setSimilar([])), 200);
     return () => clearTimeout(t);
   }, [title]);
+
+  async function upload(list: FileList | File[]) {
+    setUploadError(null);
+    const room = 4 - files.length;
+    const picked = Array.from(list).slice(0, Math.max(0, room));
+    if (!picked.length) {
+      setUploadError(t("attachment.limit"));
+      return;
+    }
+    setUploading(true);
+    for (const file of picked) {
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError(t("attachment.tooLarge"));
+        continue;
+      }
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch("/api/attachments", { method: "POST", body: form });
+        const data = (await res.json()) as { id?: string; url?: string; contentType?: string; filename?: string; error?: string };
+        if (!res.ok || !data.id || !data.url) {
+          setUploadError(data.error ?? t("attachment.failed"));
+          continue;
+        }
+        setFiles((current) => [...current, { id: data.id!, url: data.url!, contentType: data.contentType ?? file.type, filename: data.filename ?? file.name }]);
+      } catch {
+        setUploadError(t("attachment.failed"));
+      }
+    }
+    setUploading(false);
+  }
 
   function submit() {
     if (!signedIn) {
@@ -110,8 +145,9 @@ export function NewPostDialog({
     onOpenChange(false);
     setTitle("");
     setBody("");
+    setFiles([]);
 
-    createPost({ data: { boardId: postBoardId, title: postTitle, body: postBody, tags: [] } })
+    createPost({ data: { boardId: postBoardId, title: postTitle, body: postBody, tags: [], attachmentIds: files.map((f) => f.id) } })
       .then((result) => {
         onOptimisticPost?.(null);
         router.invalidate();
@@ -201,14 +237,61 @@ export function NewPostDialog({
           </div>
         ) : null}
 
-        <div className="flex items-center gap-2 px-4 pb-3 sm:px-5">
-          <span className="inline-flex h-11 w-16 items-center justify-center rounded-md border border-input bg-secondary text-faint">
+        <div
+          className="flex flex-wrap items-center gap-2 px-4 pb-3 sm:px-5"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files.length) void upload(e.dataTransfer.files);
+          }}
+        >
+          <input
+            ref={fileInput}
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,video/mp4,video/webm"
+            className="hidden"
+            onChange={(e) => e.target.files && void upload(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            disabled={uploading || files.length >= 4}
+            className="inline-flex h-11 w-16 items-center justify-center rounded-md border border-input bg-secondary text-faint hover:text-foreground disabled:opacity-50"
+            aria-label={t("attachment.add")}
+            title={t("attachment.add")}
+          >
             <ImageIcon className="size-3.5" />
-          </span>
+          </button>
           <span className="inline-flex h-11 w-16 items-center justify-center rounded-md border border-dashed border-input text-faint">
             <PlusIcon className="size-3.5" />
           </span>
-          <span className="ml-1 text-xs text-faint">{t("imagesComingSoon")}</span>
+          <span className="ml-1 text-xs text-faint">{uploading ? t("attachment.uploading") : t("attachment.hint")}</span>
+          {uploadError ? <span className="text-xs text-destructive">{uploadError}</span> : null}
+          {files.length ? (
+            <ul className="flex w-full flex-wrap gap-2 pt-1">
+              {files.map((f) => (
+                <li key={f.id} className="relative overflow-hidden rounded-md border border-input">
+                  {f.contentType.startsWith("image/") ? (
+                    <img src={f.url} alt={f.filename} className="h-16 w-24 object-cover" />
+                  ) : (
+                    <span className="flex h-16 w-40 items-center gap-1.5 px-2 text-[12px] text-muted-foreground">
+                      <PaperclipIcon className="size-3.5 shrink-0" />
+                      <span className="truncate">{f.filename}</span>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setFiles((current) => current.filter((x) => x.id !== f.id))}
+                    className="absolute top-0.5 right-0.5 inline-flex size-5 items-center justify-center rounded-full bg-background/80 text-faint hover:text-foreground"
+                    aria-label={t("attachment.remove")}
+                  >
+                    <XIcon className="size-3" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
 
         <div className="flex items-center justify-between border-t bg-background px-4 py-3 pr-3 sm:px-5">

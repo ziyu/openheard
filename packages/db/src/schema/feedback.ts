@@ -219,6 +219,33 @@ export const commentReaction = sqliteTable(
   (t) => [primaryKey({ columns: [t.commentId, t.userId, t.emoji] })],
 );
 
+// Files attached to a post or a comment, stored in the feedback R2 bucket.
+// The row carries the metadata; the object key never contains a user filename.
+export const attachment = sqliteTable(
+  "attachment",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .default("default")
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    postId: integer("post_id").references(() => post.id, { onDelete: "cascade" }),
+    commentId: integer("comment_id").references(() => comment.id, { onDelete: "cascade" }),
+    uploaderId: text("uploader_id").references(() => user.id, { onDelete: "set null" }),
+    r2Key: text("r2_key").notNull().unique(),
+    filename: text("filename").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    state: text("state", { enum: ["ready", "blocked"] }).notNull().default("ready"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).default(now).notNull(),
+  },
+  (t) => [
+    index("attachment_post_idx").on(t.postId),
+    index("attachment_comment_idx").on(t.commentId),
+    index("attachment_workspace_idx").on(t.workspaceId),
+  ],
+);
+
 // Status changes, merges and pins. Rendered inline with comments as a timeline.
 export const activity = sqliteTable(
   "activity",

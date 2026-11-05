@@ -276,6 +276,24 @@ function PostPage() {
       <div className="flex items-start gap-6">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
           <h1 className="text-2xl font-semibold leading-[1.25] tracking-[-0.02em]">{p.title}</h1>
+          {p.attachments && p.attachments.length ? (
+            <ul className="flex flex-wrap gap-2">
+              {p.attachments.map((a) => (
+                <li key={a.id}>
+                  <a href={`/files/${a.id}`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-input">
+                    {a.contentType.startsWith("image/") ? (
+                      <img src={`/files/${a.id}`} alt={a.filename} className="max-h-64 w-auto object-cover" loading="lazy" />
+                    ) : (
+                      <span className="flex items-center gap-1.5 px-3 py-2 text-[13px] text-muted-foreground hover:text-foreground">
+                        <PaperclipIcon className="size-3.5 shrink-0" />
+                        <span className="max-w-[220px] truncate">{a.filename}</span>
+                      </span>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="flex flex-wrap items-center gap-3 text-xs">
             <StatusChip status={p.status} />
             <span className="text-faint">{p.board.name}</span>
