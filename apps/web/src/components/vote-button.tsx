@@ -11,6 +11,7 @@ import { getAnonToken, getAnonVotes, setAnonVoted } from "@/lib/anon-vote";
 import { openSignIn } from "@/lib/pending-action";
 import { useOptimisticVote } from "@/lib/use-optimistic-vote";
 import { cn } from "@openheard/ui/lib/utils";
+import { useLocale } from "@/lib/locale-react";
 
 const CELL = { type: "spring", stiffness: 520, damping: 34, mass: 0.45 } as const;
 const FLIP = { type: "spring", stiffness: 260, damping: 34, mass: 0.8 } as const;
@@ -39,6 +40,7 @@ export function VoteButton({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
+  const { t } = useLocale();
   const router = useRouter();
   const reduced = useReducedMotion();
 
@@ -180,7 +182,7 @@ export function VoteButton({
       onClick={onClick}
       aria-pressed={on}
       aria-busy={like.pending}
-      aria-label={on ? "Remove vote" : "Vote"}
+      aria-label={on ? t("vote.removeVoteAria") : t("vote.voteAria")}
       data-vote
       whileTap={reduced ? undefined : { scale: 0.96 }}
       animate={reduced ? undefined : { scale: 1 }}
@@ -201,7 +203,7 @@ export function VoteButton({
       </motion.span>
       {countCell(cn(lg ? "text-sm" : "text-[13px]", on ? "text-[#0d0d0f]" : "text-foreground"))}
       <span role="status" aria-live="polite" className="sr-only">
-        {`${shown} votes, ${on ? "voted" : "not voted"}`}
+        {t("vote.summary").replace("{count}", String(shown)).replace("{state}", on ? t("vote.voted") : t("vote.notVoted"))}
       </span>
     </motion.button>
   );

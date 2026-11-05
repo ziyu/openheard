@@ -48,7 +48,7 @@ function ChangelogPage() {
       {admin ? <LocaleTabs baseline={root.workspace.defaultLocale} missing={entries.filter((e) => !e.translated).length} /> : null}
       {admin ? (
         <Button full arrow size="lg" onClick={() => setEditing("new")}>
-          New entry
+          {t("changelogEditor.new")}
         </Button>
       ) : (
         <Button full arrow size="lg" onClick={() => router.navigate({ to: "/$locale", params: { locale } })}>
@@ -113,8 +113,8 @@ function ChangelogPage() {
                       </button>
                       <button
                         type="button"
-                        title="Delete"
-                        onClick={() => confirm("Delete this entry?") && deleteChangelog({ data: { id: e.id } }).then(() => router.invalidate())}
+                        title={t("changelogEditor.deleteTitle")}
+                        onClick={() => confirm(t("changelogEditor.deleteConfirm")) && deleteChangelog({ data: { id: e.id } }).then(() => router.invalidate())}
                         className="inline-flex size-6 items-center justify-center rounded-md text-faint hover:bg-accent hover:text-foreground"
                       >
                         <TrashIcon className="size-3.5" />
@@ -153,6 +153,7 @@ function ChangelogPage() {
 
 function EntryDialog({ entry, onClose }: { entry: Entry | null | "new"; onClose: () => void }) {
   const router = useRouter();
+  const { t } = useLocale();
   const e = entry === "new" ? null : entry;
   const [title, setTitle] = useState("");
   const [version, setVersion] = useState("");
@@ -172,8 +173,8 @@ function EntryDialog({ entry, onClose }: { entry: Entry | null | "new"; onClose:
 
   useEffect(() => {
     if (!q.trim()) return setResults([]);
-    const t = setTimeout(() => searchPosts({ data: { q } }).then(setResults), 150);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => searchPosts({ data: { q } }).then(setResults), 150);
+    return () => clearTimeout(timer);
   }, [q]);
 
   async function save(publish: boolean) {
@@ -182,9 +183,9 @@ function EntryDialog({ entry, onClose }: { entry: Entry | null | "new"; onClose:
       await saveChangelog({ data: { id: e?.id, title, version, body, postIds: posts.map((p) => p.id), publish } });
       await router.invalidate();
       onClose();
-      toast.success(publish ? "Published. Linked posts are marked shipped." : "Saved as draft");
+      toast.success(publish ? t("changelogEditor.publishedToast") : t("changelogEditor.savedDraftToast"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save");
+      toast.error(err instanceof Error ? err.message : t("changelogEditor.couldNotSave"));
     } finally {
       setBusy(false);
     }
@@ -194,16 +195,16 @@ function EntryDialog({ entry, onClose }: { entry: Entry | null | "new"; onClose:
     <Dialog open={entry !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl rounded-xl border-input bg-card">
         <DialogHeader>
-          <DialogTitle>{e ? "Edit entry" : "New changelog entry"}</DialogTitle>
-          <DialogDescription>Publishing marks every linked post as shipped and notifies its voters.</DialogDescription>
+          <DialogTitle>{e ? t("changelogEditor.editTitle") : t("changelogEditor.newTitle")}</DialogTitle>
+          <DialogDescription>{t("changelogEditor.description")}</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-2">
-          <Input placeholder="What shipped" value={title} onChange={(ev) => setTitle(ev.target.value)} aria-label="Entry title" className="h-10 text-[14px] font-semibold" />
+          <Input placeholder={t("changelogEditor.titlePlaceholder")} value={title} onChange={(ev) => setTitle(ev.target.value)} aria-label={t("changelogEditor.titleAria")} className="h-10 text-[14px] font-semibold" />
           <Input placeholder="v0.4.0" value={version} onChange={(ev) => setVersion(ev.target.value)} aria-label="Version" className="h-10 font-mono" />
         </div>
-        <Textarea placeholder="Why it matters, in a few sentences." value={body} onChange={(ev) => setBody(ev.target.value)} aria-label="Entry body" className="min-h-36" />
+        <Textarea placeholder={t("changelogEditor.bodyPlaceholder")} value={body} onChange={(ev) => setBody(ev.target.value)} aria-label={t("changelogEditor.bodyAria")} className="min-h-36" />
         <div className="flex flex-col gap-2">
-          <span className="text-xs text-muted-foreground">Posts this closes</span>
+          <span className="text-xs text-muted-foreground">{t("changelogEditor.postsThisCloses")}</span>
           <div className="flex flex-wrap gap-1.5">
             {posts.map((p) => (
               <button key={p.id} type="button" onClick={() => setPosts((ps) => ps.filter((x) => x.id !== p.id))} className="inline-flex h-6 items-center gap-1 rounded-md border bg-accent px-2 text-xs" title="Remove">
@@ -211,7 +212,7 @@ function EntryDialog({ entry, onClose }: { entry: Entry | null | "new"; onClose:
               </button>
             ))}
           </div>
-          <Input placeholder="Search posts to link" value={q} onChange={(ev) => setQ(ev.target.value)} aria-label="Search posts to link" />
+          <Input placeholder={t("changelogEditor.searchPlaceholder")} value={q} onChange={(ev) => setQ(ev.target.value)} aria-label={t("changelogEditor.searchPlaceholder")} />
           {results.length ? (
             <div className="flex max-h-40 flex-col overflow-auto rounded-md border">
               {results
@@ -234,13 +235,13 @@ function EntryDialog({ entry, onClose }: { entry: Entry | null | "new"; onClose:
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {t("changelogEditor.cancel")}
           </Button>
           <Button variant="secondary" disabled={busy || title.trim().length < 3} onClick={() => save(false)}>
-            Save draft
+            {t("changelogEditor.saveDraft")}
           </Button>
           <Button arrow disabled={busy || title.trim().length < 3} onClick={() => save(true)}>
-            Publish
+            {t("changelogEditor.publish")}
           </Button>
         </div>
       </DialogContent>

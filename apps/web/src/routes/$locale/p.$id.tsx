@@ -68,7 +68,7 @@ type OptimisticComment = {
 function PostPage() {
   const p = Route.useLoaderData();
   const root = useLoaderData({ from: "__root__" });
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const router = useRouter();
   const admin = root.user?.role === "admin";
   const [reply, setReply] = useState("");
@@ -113,7 +113,7 @@ function PostPage() {
       .then(() => router.invalidate())
       .catch((err) => {
         setPendingComments((prev) => prev.filter((c) => c.id !== tempId));
-        toast.error(err instanceof Error ? err.message : "Could not comment");
+        toast.error(err instanceof Error ? err.message : t("post.couldNotComment"));
       });
   }
 
@@ -130,23 +130,23 @@ function PostPage() {
         Post idea
       </Button>
       <section>
-        <RailLabel>Voters</RailLabel>
+        <RailLabel>{t("post.voters")}</RailLabel>
         <div className="flex items-center px-2.5">
           {p.votes.map((v, i) => (
             <Avatar key={v.user.id} name={v.user.name} image={v.user.image} size={26} className={cn("ring-2 ring-background", i > 0 && "-ml-1.5")} />
           ))}
           {p.voteCount > p.votes.length ? <span className="ml-2.5 text-xs text-muted-foreground">+{p.voteCount - p.votes.length}</span> : null}
-          {p.voteCount === 0 ? <span className="text-xs text-faint">No votes yet</span> : null}
+          {p.voteCount === 0 ? <span className="text-xs text-faint">{t("post.noVotesYet")}</span> : null}
         </div>
       </section>
       <section>
-        <RailLabel>Details</RailLabel>
+        <RailLabel>{t("post.details")}</RailLabel>
         <dl className="flex flex-col">
           {[
-            ["Status", current.label],
-            ["Board", p.board.name],
-            ["Created", fullDate(p.createdAt, locale)],
-            ["Updated", since(p.updatedAt, locale)],
+            [t("post.status"), current.label],
+            [t("post.board"), p.board.name],
+            [t("post.created"), fullDate(p.createdAt, locale)],
+            [t("post.updated"), since(p.updatedAt, locale)],
           ].map(([k, v]) => (
             <div key={k} className="flex items-center justify-between px-2.5 py-1.5 text-[13px]">
               <dt className="text-faint">{k}</dt>
@@ -154,17 +154,17 @@ function PostPage() {
             </div>
           ))}
           <div className="flex items-center justify-between px-2.5 py-1.5 text-[13px]">
-            <dt className="text-faint">ETA</dt>
-            <dd className="text-muted-foreground">{admin ? <EtaEditor postId={p.id} value={p.eta} /> : (p.eta ?? "not set")}</dd>
+            <dt className="text-faint">{t("post.eta")}</dt>
+            <dd className="text-muted-foreground">{admin ? <EtaEditor postId={p.id} value={p.eta} /> : (p.eta ?? t("post.etaNotSet"))}</dd>
           </div>
         </dl>
       </section>
       <div className="px-2.5">
-        <CopyButton value={typeof window !== "undefined" ? window.location.href : ""} label="Copy link" copiedLabel="Copied!" />
+        <CopyButton value={typeof window !== "undefined" ? window.location.href : ""} label={t("post.copyLink")} copiedLabel={t("post.copied")} />
       </div>
       {admin && p.similar.length ? (
         <section>
-          <RailLabel>Also asked for</RailLabel>
+          <RailLabel>{t("post.alsoAskedFor")}</RailLabel>
           <div className="flex flex-col gap-1 px-2.5 text-[13px]">
             {p.similar.map((s) => (
               <div key={s.id} className="flex items-center justify-between gap-2">
@@ -173,11 +173,11 @@ function PostPage() {
                 </Link>
                 <button
                   type="button"
-                  title="Merge into this post"
+                  title={t("post.mergeInto")}
                   onClick={() =>
                     mergePosts({ data: { from: s.id, into: p.id } })
                       .then(() => router.invalidate())
-                      .then(() => toast.success("Merged"))
+                      .then(() => toast.success(t("post.merged")))
                       .catch((e) => toast.error(e.message))
                   }
                   className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-faint hover:bg-accent hover:text-foreground"
@@ -201,13 +201,13 @@ function PostPage() {
         </Link>
         {admin ? (
           <span className="flex items-center gap-3 font-mono text-xs text-faint">
-            {locale !== baseline && !p.translated ? <span className="text-status-planned">no {locale} translation</span> : null}
+            {locale !== baseline && !p.translated ? <span className="text-status-planned">{t("postAdmin.noTranslation").replace("{locale}", locale)}</span> : null}
             <button
               type="button"
               onClick={() => { setDraftTitle(p.title); setDraftBody(p.body); setEditing(true); }}
               className="hover:text-foreground"
             >
-              edit {locale === baseline ? "post" : `${locale} text`}
+              {locale === baseline ? t("postAdmin.editAction") : t("postAdmin.editTranslationAction").replace("{locale}", locale)}
             </button>
             <Link to="/dashboard/inbox" search={{ status: p.status, post: p.id }} className="hover:text-foreground">
               manage in dashboard →
@@ -221,12 +221,12 @@ function PostPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {locale === baseline ? "Edit post" : `Edit ${locale} translation`}
+                {locale === baseline ? t("postAdmin.editPost") : t("postAdmin.editTranslation").replace("{locale}", locale)}
               </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-3">
-              <Input value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} placeholder="Title" />
-              <Textarea value={draftBody} onChange={(e) => setDraftBody(e.target.value)} rows={8} placeholder="Details" />
+              <Input value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} placeholder={t("postAdmin.title")} />
+              <Textarea value={draftBody} onChange={(e) => setDraftBody(e.target.value)} rows={8} placeholder={t("postAdmin.details")} />
               {locale !== baseline ? (
                 <p className="text-xs text-faint">
                   Saving writes the {locale} text only; the {baseline} original stays as written.
@@ -239,19 +239,19 @@ function PostPage() {
                   variant="ghost"
                   onClick={() => {
                     void savePostContent({ data: { id: p.id, locale, title: draftTitle, body: draftBody, clear: true } })
-                      .then(() => { setEditing(false); toast("Translation removed"); return router.invalidate(); })
-                      .catch((err) => toast.error(err instanceof Error ? err.message : "Could not save"));
+                      .then(() => { setEditing(false); toast(t("postAdmin.removed")); return router.invalidate(); })
+                      .catch((err) => toast.error(err instanceof Error ? err.message : t("postAdmin.couldNotSave")));
                   }}
                 >
-                  Remove translation
+                  {t("postAdmin.removeTranslation")}
                 </Button>
               ) : null}
               <Button
                 disabled={!draftTitle.trim()}
                 onClick={() => {
                   void savePostContent({ data: { id: p.id, locale, title: draftTitle.trim(), body: draftBody } })
-                    .then(() => { setEditing(false); toast.success("Saved"); return router.invalidate(); })
-                    .catch((err) => toast.error(err instanceof Error ? err.message : "Could not save"));
+                    .then(() => { setEditing(false); toast.success(t("postAdmin.saved")); return router.invalidate(); })
+                    .catch((err) => toast.error(err instanceof Error ? err.message : t("postAdmin.couldNotSave")));
                 }}
               >
                 Save
@@ -264,7 +264,7 @@ function PostPage() {
       {p.mergedInto ? (
         <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm">
           <ArrowsMergeIcon className="size-4 text-muted-foreground" />
-          <span>This post was merged into</span>
+          <span>{t("post.mergedInto")}</span>
           <Link to="/$locale/p/$id" params={{ locale, id: String(p.mergedInto.id) }} className="font-semibold text-link hover:underline">
             {p.mergedInto.title}
           </Link>
@@ -312,7 +312,7 @@ function PostPage() {
 
       <section className="flex flex-col gap-5 border-t pt-5">
         <h2 className="flex items-center gap-2 text-[14px] font-semibold">
-          Comments <span className="font-mono text-xs font-normal text-faint">{comments}</span>
+          {t("post.comments")} <span className="font-mono text-xs font-normal text-faint">{comments}</span>
         </h2>
 
         <form onSubmit={submitReply} className="flex flex-col gap-3 rounded-lg border bg-card px-3.5 py-3 transition-colors focus-within:border-input">
@@ -326,8 +326,8 @@ function PostPage() {
               }
               setExpanded(true);
             }}
-            placeholder={root.user ? "Add a comment" : "Sign in to comment"}
-            aria-label="Add a comment"
+            placeholder={root.user ? t("post.addComment") : t("post.signInToComment")}
+            aria-label={t("post.addComment")}
             rows={1}
             className={cn("w-full resize-none bg-transparent text-sm leading-relaxed text-foreground outline-none transition-[height] duration-150 ease-out placeholder:text-faint motion-reduce:transition-none", expanded || reply ? "h-[76px]" : "h-[24px]")}
             onKeyDown={(e) => {
@@ -336,15 +336,15 @@ function PostPage() {
           />
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 text-xs text-faint">
-              <PaperclipIcon className="size-3.5" /> Attach
+              <PaperclipIcon className="size-3.5" /> {t("post.attach")}
             </span>
             <Button variant="secondary" size="sm" type="submit" disabled={reply.trim().length === 0}>
-              Comment
+              {t("post.comment")}
             </Button>
           </div>
         </form>
 
-        {mergedTimeline.length === 0 ? <p className="text-sm text-faint">No comments yet. Be the first, it helps the team prioritise.</p> : null}
+        {mergedTimeline.length === 0 ? <p className="text-sm text-faint">{t("post.noComments")}</p> : null}
         <div className="flex flex-col gap-5">
           {mergedTimeline.map((item) => {
             const team = item.kind === "activity" || (item.author as { role?: string } | null)?.role === "admin";
