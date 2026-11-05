@@ -1,4 +1,4 @@
-import { activity, anonymousVote, board, comment, commentReaction, createDb, post, postTag, status, tag, vote } from "@openheard/db";
+import { activity, anonymousVote, board, comment, commentReaction, createDb, post, postTag, postTranslation, status, tag, vote } from "@openheard/db";
 
 import { purgeWorkspaceCache } from "@/lib/cache";
 import { assertStatus, listStatuses, statusOfKind } from "@/lib/status-db";
@@ -38,6 +38,16 @@ async function ownTags(db: ReturnType<typeof createDb>, tagIds: string[], worksp
 async function ownPost(db: ReturnType<typeof createDb>, postId: number, workspaceId: string) {
   const [row] = await db.select({ id: post.id }).from(post).where(and(eq(post.id, postId), eq(post.workspaceId, workspaceId))).limit(1);
   if (!row) throw new Error("Post not found");
+}
+
+/** One query for every listed post: translation wins, baseline is the fallback. */
+async function translationsFor(db: ReturnType<typeof createDb>, ids: number[], locale: string) {
+  if (!ids.length) return new Map<number, { title: string; body: string }>();
+  const rows = await db
+    .select({ postId: postTranslation.postId, title: postTranslation.title, body: postTranslation.body })
+    .from(postTranslation)
+    .where(and(inArray(postTranslation.postId, ids), eq(postTranslation.locale, locale)));
+  return new Map(rows.map((r) => [r.postId, { title: r.title, body: r.body }]));
 }
 
 const listInput = z.object({
@@ -95,11 +105,14 @@ export const listPosts = createServerFn({ method: "GET" })
       },
     });
     const [{ total }] = await db.select({ total: sql<number>`count(*)` }).from(post).where(where);
+    const translated = await translationsFor(db, rows.map((r) => r.id), context.locale);
     return {
-      posts: rows.map((r) => ({
+      posts: rows.map((r) => {
+        const body = translated.get(r.id)?.body ?? r.body;
+        return {
         id: r.id,
-        title: r.title,
-        excerpt: r.body.length > 180 ? r.body.slice(0, 177).trimEnd() + "…" : r.body,
+        title: translated.get(r.id)?.title ?? r.title,
+        excerpt: body.length > 180 ? body.slice(0, 177).trimEnd() + "…" : body,
         status: r.status,
         pinned: r.pinned,
         voteCount: r.voteCount,
@@ -109,7 +122,8 @@ export const listPosts = createServerFn({ method: "GET" })
         author: r.author,
         tags: r.tags.map((t) => t.tag),
         voted: r.votes.length > 0,
-      })),
+        };
+      }),
       total,
     };
   });
@@ -135,6 +149,11 @@ export const getPost = createServerFn({ method: "GET" })
       },
     });
     if (!p) return null;
+    const [translation] = await db
+      .select({ title: postTranslation.title, body: postTranslation.body })
+      .from(postTranslation)
+      .where(and(eq(postTranslation.postId, p.id), eq(postTranslation.locale, context.locale)))
+      .limit(1);
     if (context.workspace.requireApproval) {
       const statuses = await listStatuses(db, context.workspace.id);
       const postStatus = statuses.find((s) => s.key === p.status);
@@ -163,6 +182,9 @@ export const getPost = createServerFn({ method: "GET" })
     const mergedFrom = await db.select({ id: post.id, title: post.title, voteCount: post.voteCount }).from(post).where(eq(post.mergedIntoId, p.id));
     return {
       ...p,
+      title: translation?.title ?? p.title,
+      body: translation?.body ?? p.body,
+      translated: !!translation,
       tags: p.tags.map((t) => t.tag),
       voted,
       similar,
@@ -190,6 +212,47 @@ export const getPost = createServerFn({ method: "GET" })
         ...p.activity.map((a) => ({ kind: "activity" as const, id: `a${a.id}`, at: a.createdAt, author: a.actor, type: a.type, from: a.fromStatus, to: a.toStatus, note: a.note })),
       ].sort((a, b) => +new Date(b.at) - +new Date(a.at)),
     };
+  });
+
+/**
+ * Admins write a post's text in one language. The baseline language edits the
+ * post row itself; every other language is a post_translation row, and an
+ * empty translation deletes it so the baseline shows through again.
+ */
+export const savePostContent = createServerFn({ method: "POST" })
+  .middleware([sessionMiddleware])
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.number().int(),
+        locale: z.string(),
+        title: z.string().trim().min(1).max(140),
+        body: z.string().max(20000).default(""),
+        clear: z.boolean().default(false),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    requireAdmin(context.user);
+    const db = createDb();
+    await ownPost(db, data.id, context.workspace.id);
+    const baseline = context.workspace.defaultLocale;
+    if (data.locale === baseline) {
+      await db.update(post).set({ title: data.title, body: data.body }).where(eq(post.id, data.id));
+    } else if (data.clear) {
+      await db.delete(postTranslation).where(and(eq(postTranslation.postId, data.id), eq(postTranslation.locale, data.locale)));
+    } else {
+      await db
+        .insert(postTranslation)
+        .values({ postId: data.id, locale: data.locale, title: data.title, body: data.body })
+        .onConflictDoUpdate({
+          target: [postTranslation.postId, postTranslation.locale],
+          set: { title: data.title, body: data.body },
+        });
+    }
+    void invalidateWorkspace(context.workspace.id);
+    purgeWorkspaceCache(new URL(getRequest().url).origin, [data.id]);
+    return { ok: true };
   });
 
 export const createPost = createServerFn({ method: "POST" })
@@ -412,7 +475,8 @@ export const getRoadmap = createServerFn({ method: "GET" })
       },
       columns: { id: true, title: true, status: true, boardId: true, voteCount: true, commentCount: true, eta: true, statusChangedAt: true },
     });
-    return rows.map((r) => ({ ...r, tags: r.tags.map((t) => t.tag), voted: r.votes.length > 0, votes: undefined }));
+    const translated = await translationsFor(db, rows.map((r) => r.id), context.locale);
+    return rows.map((r) => ({ ...r, title: translated.get(r.id)?.title ?? r.title, tags: r.tags.map((t) => t.tag), voted: r.votes.length > 0, votes: undefined }));
   });
 
 export const searchPosts = createServerFn({ method: "GET" })
@@ -426,11 +490,26 @@ export const searchPosts = createServerFn({ method: "GET" })
     const terms = words.length ? words.slice(0, 5) : [data.q.toLowerCase()];
     const escaped = terms.map(escapeLike);
     const hits = sql.join(escaped.map((w) => sql`(lower(${post.title}) like ${"%" + w + "%"} escape '\\')`), sql` + `);
-    return db
+    // A post matches in either language: its own text or the active locale's
+    // translation, so someone searching in Chinese finds the English original.
+    const translatedHit = inArray(
+      post.id,
+      db.select({ id: postTranslation.postId }).from(postTranslation).where(and(
+        eq(postTranslation.locale, context.locale),
+        or(...escaped.map((w) => like(postTranslation.title, `%${w}%`)), ...escaped.map((w) => like(postTranslation.body, `%${w}%`))),
+      )),
+    );
+    const rows = await db
       .select({ id: post.id, title: post.title, voteCount: post.voteCount, status: post.status })
       .from(post)
-      .where(and(eq(post.workspaceId, context.workspace.id), sql`${post.mergedIntoId} is null`, or(...escaped.map((w) => like(post.title, `%${w}%`)))))
+      .where(and(
+        eq(post.workspaceId, context.workspace.id),
+        sql`${post.mergedIntoId} is null`,
+        or(translatedHit, ...escaped.map((w) => like(post.title, `%${w}%`)), ...escaped.map((w) => like(post.body, `%${w}%`))),
+      ))
       .orderBy(desc(hits), desc(post.voteCount))
       .limit(8);
+    const translated = await translationsFor(db, rows.map((r) => r.id), context.locale);
+    return rows.map((r) => ({ ...r, title: translated.get(r.id)?.title ?? r.title }));
   });
 

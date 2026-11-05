@@ -307,6 +307,19 @@ export const statusTranslation = sqliteTable(
   ],
 );
 
+export const postTranslation = sqliteTable(
+  "post_translation",
+  {
+    postId: integer("post_id")
+      .notNull()
+      .references(() => post.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.locale] })],
+);
+
 export const changelogTranslation = sqliteTable(
   "changelog_translation",
   {
@@ -386,6 +399,10 @@ export const statusTranslationRelations = relations(statusTranslation, ({ one })
   status: one(status, { fields: [statusTranslation.workspaceId, statusTranslation.key], references: [status.workspaceId, status.key] }),
 }));
 
+export const postTranslationRelations = relations(postTranslation, ({ one }) => ({
+  post: one(post, { fields: [postTranslation.postId], references: [post.id] }),
+}));
+
 export const postRelations = relations(post, ({ one, many }) => ({
   board: one(board, { fields: [post.boardId], references: [board.id] }),
   author: one(user, { fields: [post.authorId], references: [user.id] }),
@@ -393,6 +410,7 @@ export const postRelations = relations(post, ({ one, many }) => ({
   votes: many(vote),
   comments: many(comment),
   activity: many(activity),
+  translations: many(postTranslation),
 }));
 
 export const postTagRelations = relations(postTag, ({ one }) => ({

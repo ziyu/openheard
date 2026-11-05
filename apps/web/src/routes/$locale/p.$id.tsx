@@ -8,13 +8,16 @@ import { toast } from "sonner";
 import { openSignIn } from "@/lib/pending-action";
 
 import { Button } from "@openheard/ui/components/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@openheard/ui/components/dialog";
+import { Input } from "@openheard/ui/components/input";
+import { Textarea } from "@openheard/ui/components/textarea";
 import { CopyButton } from "@openheard/ui/components/interior/copy-button";
 import { Avatar, StatusChip, TeamBadge } from "@/components/bits";
 import { SkeletonSwap } from "@/components/interior/skeleton-swap";
 import { RailLabel, Shell } from "@/components/shell";
 import { ErrorState, PostSkeleton } from "@/components/states";
 import { VoteButton } from "@/components/vote-button";
-import { addComment, getPost, mergePosts, setEta } from "@/functions/posts";
+import { addComment, getPost, mergePosts, savePostContent, setEta } from "@/functions/posts";
 import { findStatus, roadmapStatuses, useStatuses } from "@/lib/status";
 import { ago, fullDate, since } from "@/lib/time";
 import { cn } from "@openheard/ui/lib/utils";
@@ -72,6 +75,10 @@ function PostPage() {
   const [expanded, setExpanded] = useState(false);
   const [ready, setReady] = useState(false);
   const [pendingComments, setPendingComments] = useState<OptimisticComment[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(p.title);
+  const [draftBody, setDraftBody] = useState(p.body);
+  const baseline = root.workspace.defaultLocale;
   useEffect(() => setReady(true), []);
 
   const prevTimeline = useRef(p.timeline);
@@ -193,11 +200,66 @@ function PostPage() {
           <ArrowLeftIcon className="size-3.5 text-faint" /> {p.board.name}
         </Link>
         {admin ? (
-          <Link to="/dashboard/inbox" search={{ status: p.status, post: p.id }} className="font-mono text-xs text-faint hover:text-foreground">
-            manage in dashboard →
-          </Link>
+          <span className="flex items-center gap-3 font-mono text-xs text-faint">
+            {locale !== baseline && !p.translated ? <span className="text-status-planned">no {locale} translation</span> : null}
+            <button
+              type="button"
+              onClick={() => { setDraftTitle(p.title); setDraftBody(p.body); setEditing(true); }}
+              className="hover:text-foreground"
+            >
+              edit {locale === baseline ? "post" : `${locale} text`}
+            </button>
+            <Link to="/dashboard/inbox" search={{ status: p.status, post: p.id }} className="hover:text-foreground">
+              manage in dashboard →
+            </Link>
+          </span>
         ) : null}
       </div>
+
+      {admin ? (
+        <Dialog open={editing} onOpenChange={setEditing}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {locale === baseline ? "Edit post" : `Edit ${locale} translation`}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-3">
+              <Input value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} placeholder="Title" />
+              <Textarea value={draftBody} onChange={(e) => setDraftBody(e.target.value)} rows={8} placeholder="Details" />
+              {locale !== baseline ? (
+                <p className="text-xs text-faint">
+                  Saving writes the {locale} text only; the {baseline} original stays as written.
+                </p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              {locale !== baseline && p.translated ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    void savePostContent({ data: { id: p.id, locale, title: draftTitle, body: draftBody, clear: true } })
+                      .then(() => { setEditing(false); toast("Translation removed"); return router.invalidate(); })
+                      .catch((err) => toast.error(err instanceof Error ? err.message : "Could not save"));
+                  }}
+                >
+                  Remove translation
+                </Button>
+              ) : null}
+              <Button
+                disabled={!draftTitle.trim()}
+                onClick={() => {
+                  void savePostContent({ data: { id: p.id, locale, title: draftTitle.trim(), body: draftBody } })
+                    .then(() => { setEditing(false); toast.success("Saved"); return router.invalidate(); })
+                    .catch((err) => toast.error(err instanceof Error ? err.message : "Could not save"));
+                }}
+              >
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       {p.mergedInto ? (
         <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm">
