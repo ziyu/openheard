@@ -76,7 +76,20 @@ export const listPosts = createServerFn({ method: "GET" })
       reviewKeys.length ? sql`${post.status} not in (${sql.join(reviewKeys.map((k) => sql`${k}`), sql`, `)})` : undefined,
       data.board ? eq(post.boardId, data.board) : undefined,
       data.status ? eq(post.status, data.status) : undefined,
-      data.q ? or(like(post.title, `%${escapeLike(data.q)}%`), like(post.body, `%${escapeLike(data.q)}%`)) : undefined,
+      data.q
+        ? or(
+            like(post.title, `%${escapeLike(data.q)}%`),
+            like(post.body, `%${escapeLike(data.q)}%`),
+            // A Chinese query has to find the post whose baseline is English.
+            inArray(
+              post.id,
+              db.select({ id: postTranslation.postId }).from(postTranslation).where(and(
+                eq(postTranslation.locale, context.locale),
+                or(like(postTranslation.title, `%${escapeLike(data.q)}%`), like(postTranslation.body, `%${escapeLike(data.q)}%`)),
+              )),
+            ),
+          )
+        : undefined,
       data.tag
         ? inArray(post.id, db.select({ id: postTag.postId }).from(postTag).where(eq(postTag.tagId, data.tag)))
         : undefined,
