@@ -128,5 +128,7 @@
   "vote.voteAria": "Vote",
   "vote.removeVoteAria": "Remove vote",
   "post.etaNotSet": "not set",
-  "postAdmin.manageInDashboard": "manage in dashboard →"
+  "postAdmin.manageInDashboard": "manage in dashboard →",
+  "postAdmin.save": "Save",
+  "post.copyFailed": "Failed"
 }

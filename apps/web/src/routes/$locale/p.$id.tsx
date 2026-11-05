@@ -1,5 +1,7 @@
 import { ArrowLeftIcon, ArrowsMergeIcon, PaperclipIcon } from "@phosphor-icons/react";
 import { useLocale } from "@/lib/locale-react";
+
+const LOCALE_LABEL = { en: "English", "zh-CN": "中文" } as const;
 import { localeAlternates } from "@/lib/locale-head";
 import { asLocale } from "@/lib/locale";
 import { Link, createFileRoute, notFound, useLoaderData, useRouter } from "@tanstack/react-router";
@@ -160,7 +162,7 @@ function PostPage() {
         </dl>
       </section>
       <div className="px-2.5">
-        <CopyButton value={typeof window !== "undefined" ? window.location.href : ""} label={t("post.copyLink")} copiedLabel={t("post.copied")} />
+        <CopyButton value={typeof window !== "undefined" ? window.location.href : ""} label={t("post.copyLink")} copiedLabel={t("post.copied")} errorLabel={t("post.copyFailed")} />
       </div>
       {admin && p.similar.length ? (
         <section>
@@ -201,13 +203,13 @@ function PostPage() {
         </Link>
         {admin ? (
           <span className="flex items-center gap-3 font-mono text-xs text-faint">
-            {locale !== baseline && !p.translated ? <span className="text-status-planned">{t("postAdmin.noTranslation").replace("{locale}", locale)}</span> : null}
+            {locale !== baseline && !p.translated ? <span className="text-status-planned">{t("postAdmin.noTranslation").replace("{locale}", LOCALE_LABEL[locale])}</span> : null}
             <button
               type="button"
               onClick={() => { setDraftTitle(p.title); setDraftBody(p.body); setEditing(true); }}
               className="hover:text-foreground"
             >
-              {locale === baseline ? t("postAdmin.editAction") : t("postAdmin.editTranslationAction").replace("{locale}", locale)}
+              {locale === baseline ? t("postAdmin.editAction") : t("postAdmin.editTranslationAction").replace("{locale}", LOCALE_LABEL[locale])}
             </button>
             <Link to="/dashboard/inbox" search={{ status: p.status, post: p.id }} className="hover:text-foreground">
               {t("postAdmin.manageInDashboard")}
@@ -221,7 +223,7 @@ function PostPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {locale === baseline ? t("postAdmin.editPost") : t("postAdmin.editTranslation").replace("{locale}", locale)}
+                {locale === baseline ? t("postAdmin.editPost") : t("postAdmin.editTranslation").replace("{locale}", LOCALE_LABEL[locale])}
               </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-3">
@@ -229,7 +231,7 @@ function PostPage() {
               <Textarea value={draftBody} onChange={(e) => setDraftBody(e.target.value)} rows={8} placeholder={t("postAdmin.details")} />
               {locale !== baseline ? (
                 <p className="text-xs text-faint">
-                  Saving writes the {locale} text only; the {baseline} original stays as written.
+                  {t("postAdmin.translationNote").replace("{locale}", LOCALE_LABEL[locale]).replace("{base}", LOCALE_LABEL[asLocale(baseline)])}
                 </p>
               ) : null}
             </div>
@@ -254,7 +256,7 @@ function PostPage() {
                     .catch((err) => toast.error(err instanceof Error ? err.message : t("postAdmin.couldNotSave")));
                 }}
               >
-                Save
+                {t("postAdmin.save")}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -128,5 +128,7 @@
   "vote.voteAria": "投票",
   "vote.removeVoteAria": "取消投票",
   "post.etaNotSet": "未设置",
-  "postAdmin.manageInDashboard": "在控制台管理 →"
+  "postAdmin.manageInDashboard": "在控制台管理 →",
+  "postAdmin.save": "保存",
+  "post.copyFailed": "复制失败"
 }
