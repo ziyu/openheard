@@ -127,7 +127,7 @@ function PostPage() {
   const rail = (
     <>
       <Button full arrow size="lg" onClick={() => router.navigate({ to: "/$locale", params: { locale } })}>
-        Post idea
+        {t("postIdea")}
       </Button>
       <section>
         <RailLabel>{t("post.voters")}</RailLabel>
@@ -210,7 +210,7 @@ function PostPage() {
               {locale === baseline ? t("postAdmin.editAction") : t("postAdmin.editTranslationAction").replace("{locale}", locale)}
             </button>
             <Link to="/dashboard/inbox" search={{ status: p.status, post: p.id }} className="hover:text-foreground">
-              manage in dashboard →
+              {t("postAdmin.manageInDashboard")}
             </Link>
           </span>
         ) : null}
@@ -383,14 +383,15 @@ function PostPage() {
 
 function EtaEditor({ postId, value }: { postId: number; value: string | null }) {
   const router = useRouter();
+  const { t } = useLocale();
   const [v, setV] = useState(value ?? "");
   return (
     <input
       value={v}
       onChange={(e) => setV(e.target.value)}
       onBlur={() => v !== (value ?? "") && setEta({ data: { postId, eta: v } }).then(() => router.invalidate())}
-      placeholder="not set"
-      aria-label="ETA"
+      placeholder={t("post.etaNotSet")}
+      aria-label={t("post.eta")}
       className="-mx-1 w-24 rounded-sm border border-transparent bg-transparent px-1 text-right text-[13px] outline-none placeholder:text-faint hover:border-input focus:border-ring"
     />
   );

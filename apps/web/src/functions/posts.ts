@@ -189,10 +189,16 @@ export const getPost = createServerFn({ method: "GET" })
           .orderBy(desc(post.voteCount))
           .limit(3)
       : [];
-    const mergedInto = p.mergedIntoId
+    const relatedIds = [p.mergedIntoId, ...similar.map((s) => s.id)].filter((x): x is number => typeof x === "number");
+    const relatedTitles = await translationsFor(db, relatedIds, context.locale);
+    const titleOf = (id: number, fallback: string) => relatedTitles.get(id)?.title ?? fallback;
+    const mergedIntoRow = p.mergedIntoId
       ? await db.query.post.findFirst({ where: eq(post.id, p.mergedIntoId), columns: { id: true, title: true } })
       : null;
-    const mergedFrom = await db.select({ id: post.id, title: post.title, voteCount: post.voteCount }).from(post).where(eq(post.mergedIntoId, p.id));
+    const mergedInto = mergedIntoRow ? { ...mergedIntoRow, title: titleOf(mergedIntoRow.id, mergedIntoRow.title) } : null;
+    const mergedFromRows = await db.select({ id: post.id, title: post.title, voteCount: post.voteCount }).from(post).where(eq(post.mergedIntoId, p.id));
+    const mergedFromTitles = await translationsFor(db, mergedFromRows.map((r) => r.id), context.locale);
+    const mergedFrom = mergedFromRows.map((r) => ({ ...r, title: mergedFromTitles.get(r.id)?.title ?? r.title }));
     return {
       ...p,
       title: translation?.title ?? p.title,
@@ -200,7 +206,7 @@ export const getPost = createServerFn({ method: "GET" })
       translated: !!translation,
       tags: p.tags.map((t) => t.tag),
       voted,
-      similar,
+      similar: similar.map((s) => ({ ...s, title: titleOf(s.id, s.title) })),
       mergedInto,
       mergedFrom,
       timeline: [

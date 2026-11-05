@@ -127,5 +127,6 @@
   "vote.notVoted": "未投票",
   "vote.voteAria": "投票",
   "vote.removeVoteAria": "取消投票",
-  "post.etaNotSet": "未设置"
+  "post.etaNotSet": "未设置",
+  "postAdmin.manageInDashboard": "在控制台管理 →"
 }

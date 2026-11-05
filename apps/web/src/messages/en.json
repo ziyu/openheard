@@ -127,5 +127,6 @@
   "vote.notVoted": "not voted",
   "vote.voteAria": "Vote",
   "vote.removeVoteAria": "Remove vote",
-  "post.etaNotSet": "not set"
+  "post.etaNotSet": "not set",
+  "postAdmin.manageInDashboard": "manage in dashboard →"
 }
