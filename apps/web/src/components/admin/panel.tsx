@@ -4,11 +4,13 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { Kbd } from "@/components/bits";
+import { useLocale } from "@/lib/locale-react";
 import { cn } from "@openheard/ui/lib/utils";
 
 // The rounded content panel every admin page lives in, with its top bar.
 export function Panel({ title, children, className, actions, aside, onSearch }: { title: ReactNode; children: ReactNode; className?: string; actions?: ReactNode; aside?: ReactNode; onSearch?: (q: string) => void }) {
   const navigate = useNavigate();
+  const { t } = useLocale();
   const [q, setQ] = useState("");
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col py-3 pr-3">
@@ -41,13 +43,13 @@ export function Panel({ title, children, className, actions, aside, onSearch }: 
                     e.currentTarget.blur();
                   }
                 }}
-                placeholder="Search posts"
-                aria-label="Search posts"
+                placeholder={t("dash.shell.searchPosts")}
+                aria-label={t("dash.shell.searchPosts")}
                 className="h-[30px] w-[220px] rounded-lg border bg-card pr-10 pl-7 text-[13px] outline-none placeholder:text-faint focus:border-ring/60"
               />
               <Kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2">⌘K</Kbd>
             </form>
-            <button type="button" className="inline-flex size-[30px] items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" title="Notifications">
+            <button type="button" className="inline-flex size-[30px] items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" title={t("dash.shell.notifications")}>
               <BellIcon className="size-[15px]" />
             </button>
           </div>

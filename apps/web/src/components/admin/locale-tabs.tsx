@@ -12,7 +12,7 @@ const LABELS: Record<Locale, string> = { en: "English", "zh-CN": "中文" };
  * selected language, and the board preview on the page follows it too.
  */
 export function LocaleTabs({ baseline, missing }: { baseline: string; missing?: number }) {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const router = useRouter();
   const base: Locale = isLocale(baseline) ? baseline : "en";
   const ordered = [base, ...SUPPORTED_LOCALES.filter((l) => l !== base)];
@@ -24,7 +24,7 @@ export function LocaleTabs({ baseline, missing }: { baseline: string; missing?: 
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b pb-3" role="tablist" aria-label="Content language">
+    <div className="flex flex-wrap items-center gap-1 border-b pb-3" role="tablist" aria-label={t("dash.shell.contentLanguage")}>
       {ordered.map((l) => (
         <button
           key={l}
@@ -38,14 +38,16 @@ export function LocaleTabs({ baseline, missing }: { baseline: string; missing?: 
           )}
         >
           {LABELS[l]}
-          {l === base ? <span className="font-mono text-[10px] text-faint uppercase">base</span> : null}
+          {l === base ? <span className="font-mono text-[10px] text-faint uppercase">{t("dash.shell.baseBadge")}</span> : null}
           {l === locale && l !== base && missing ? (
             <span className="rounded-full bg-status-planned/15 px-1.5 font-mono text-[10px] text-status-planned">{missing}</span>
           ) : null}
         </button>
       ))}
       <span className="ml-auto text-xs text-faint">
-        {locale === base ? "Editing the base language" : `Editing ${LABELS[locale]} · falls back to ${LABELS[base]} when empty`}
+        {locale === base
+          ? t("dash.shell.editingBase")
+          : t("dash.shell.editingLocale").replace("{locale}", LABELS[locale]).replace("{base}", LABELS[base])}
       </span>
     </div>
   );

@@ -1,3 +1,5 @@
+import type { Locale } from "./locale";
+
 const units: [number, Intl.RelativeTimeFormatUnit][] = [
   [60, "second"],
   [60, "minute"],
@@ -8,28 +10,35 @@ const units: [number, Intl.RelativeTimeFormatUnit][] = [
   [Infinity, "year"],
 ];
 
-// "2d", "3w": short enough to sit in a meta row.
-export function ago(date: Date | number | string): string {
+const SHORT_EN: Record<string, string> = { second: "s", minute: "m", hour: "h", day: "d", week: "w", month: "mo", year: "y" };
+const SHORT_ZH: Record<string, string> = { second: "秒", minute: "分钟", hour: "小时", day: "天", week: "周", month: "个月", year: "年" };
+
+// Short relative time for meta rows: "2d" in English, "2天" in Chinese.
+export function ago(date: Date | number | string, locale: Locale = "en"): string {
   let diff = (Date.now() - new Date(date).getTime()) / 1000;
-  if (diff < 45) return "now";
-  const short: Record<string, string> = { second: "s", minute: "m", hour: "h", day: "d", week: "w", month: "mo", year: "y" };
+  if (diff < 45) return locale === "zh-CN" ? "刚刚" : "now";
+  const short = locale === "zh-CN" ? SHORT_ZH : SHORT_EN;
   for (const [size, unit] of units) {
-    if (diff < size) return `${Math.max(1, Math.round(diff))}${short[unit]}`;
+    if (diff < size) return locale === "zh-CN" ? `${Math.max(1, Math.round(diff))}${short[unit]}` : `${Math.max(1, Math.round(diff))}${short[unit]}`;
     diff /= size;
   }
   return "";
 }
 
-export function longDate(date: Date | number | string): string {
-  return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const tag = (locale: Locale) => (locale === "zh-CN" ? "zh-CN" : "en-US");
+
+export function longDate(date: Date | number | string, locale: Locale = "en"): string {
+  return new Date(date).toLocaleDateString(tag(locale), { month: "short", day: "numeric" });
 }
 
-export function fullDate(date: Date | number | string): string {
-  return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+export function fullDate(date: Date | number | string, locale: Locale = "en"): string {
+  return new Date(date).toLocaleDateString(tag(locale), { month: "short", day: "numeric", year: "numeric" });
 }
 
-// "3d ago", or "just now" when it is fresh. For sentences, not meta rows.
-export function since(date: Date | number | string): string {
-  const a = ago(date);
-  return a === "now" ? "just now" : `${a} ago`;
+// Sentence form: "3d ago" / "3天前", "just now" / "刚刚".
+export function since(date: Date | number | string, locale: Locale = "en"): string {
+  const a = ago(date, locale);
+  const fresh = locale === "zh-CN" ? "刚刚" : "now";
+  if (a === fresh) return locale === "zh-CN" ? "刚刚" : "just now";
+  return locale === "zh-CN" ? `${a}前` : `${a} ago`;
 }

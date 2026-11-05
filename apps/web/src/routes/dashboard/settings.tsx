@@ -6,6 +6,7 @@ import { DashboardErrorState, DashboardPanelSkeleton } from "@/components/states
 import { SETTINGS_NAV } from "@/lib/admin-nav";
 import { DEMO_HIDDEN_SETTINGS, isDemo } from "@/lib/demo";
 import { cn } from "@openheard/ui/lib/utils";
+import { useLocale } from "@/lib/locale-react";
 
 export const Route = createFileRoute("/dashboard/settings")({
   // Locked demo pages never mount, so their loaders never call a server
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/dashboard/settings")({
 
 function SettingsLayout() {
   const { pathname } = useLocation();
+  const { t } = useLocale();
   const root = useLoaderData({ from: "__root__" });
   // The demo hands admin to anyone, so the settings that spend money, show
   // member emails or outlive the nightly reset are not there at all.
@@ -38,13 +40,13 @@ function SettingsLayout() {
         </Link>
         {groups.map((g) => (
           <div key={g.group} className="flex flex-row gap-0.5 md:flex-col md:pt-3.5">
-            <div className="hidden px-2 pb-1.5 font-mono text-[11px] tracking-[0.06em] text-faint uppercase md:block">{g.group}</div>
+            <div className="hidden px-2 pb-1.5 font-mono text-[11px] tracking-[0.06em] text-faint uppercase md:block">{t(g.group)}</div>
             {g.items.map(([slug, label]) => {
               const to = `/dashboard/settings/${slug}`;
               const on = pathname === to;
               return (
                 <Link key={slug} to={to} preload="viewport" className={cn("flex h-7 items-center whitespace-nowrap rounded-md px-2 text-[13px]", on ? "bg-secondary font-semibold text-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground")}>
-                  {label}
+                  {t(label)}
                 </Link>
               );
             })}

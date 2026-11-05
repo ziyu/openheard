@@ -207,7 +207,7 @@ function BoardPage() {
                       <span className="inline-flex items-center gap-1.5 text-faint">
                         <Avatar name={p.author?.name ?? "?"} image={p.author?.image} size={16} />
                         {p.author?.name ?? t("someone")}
-                        <span>· {ago(p.createdAt)}</span>
+                        <span>· {ago(p.createdAt, locale)}</span>
                       </span>
                     </div>
                   </div>

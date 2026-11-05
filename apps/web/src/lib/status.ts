@@ -26,14 +26,6 @@ export const KIND_ICON: Record<StatusKind, "circle-dashed" | "circle" | "circle-
   closed: "x-circle",
 };
 
-export const KIND_LABEL: Record<StatusKind, string> = {
-  open: "New posts land here",
-  review: "Being looked at",
-  planned: "Committed, not started",
-  progress: "Being built",
-  done: "Shipped",
-  closed: "Will not do, or merged",
-};
 
 // Tints for chips: colour at 15 percent over the surface.
 export const tint = (hex: string, alpha = 0.15) => {

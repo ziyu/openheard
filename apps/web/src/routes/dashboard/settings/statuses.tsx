@@ -10,20 +10,36 @@ import { toast } from "sonner";
 import { LocaleTabs } from "@/components/admin/locale-tabs";
 import { SectionHead, Toggle } from "@/components/admin/panel";
 import { deleteStatus, reorderStatuses, saveStatus } from "@/functions/statuses";
-import { KIND_LABEL } from "@/lib/status";
+import { asLocale, translate } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
 import type { StatusInfo } from "@/lib/status";
 import { PageHead } from "@/routes/dashboard/settings";
 import { cn } from "@openheard/ui/lib/utils";
 
 export const Route = createFileRoute("/dashboard/settings/statuses")({
-  head: () => ({ meta: [{ title: "Statuses · settings" }] }),
+  head: ({ matches }) => {
+    const locale = asLocale((matches[0]?.loaderData as { locale?: string } | undefined)?.locale);
+    return { meta: [{ title: translate(locale, "dash.product.headStatuses") }] };
+  },
   component: Statuses,
 });
 
 const SWATCHES = ["#f2b53d", "#b08cff", "#6e8bff", "#3ecf8e", "#e0705f", "#5fc8e0", "#ff8fab", "#7a7a85"];
 
+// Kind descriptions live here rather than in lib/status so the page can
+// translate them; the kind keys themselves stay untranslated.
+const KIND_KEY: Record<StatusKind, string> = {
+  open: "dash.product.kindOpen",
+  review: "dash.product.kindReview",
+  planned: "dash.product.kindPlanned",
+  progress: "dash.product.kindProgress",
+  done: "dash.product.kindDone",
+  closed: "dash.product.kindClosed",
+};
+
 function Statuses() {
   const root = useLoaderData({ from: "__root__" });
+  const { t } = useLocale();
   const router = useRouter();
   const [adding, setAdding] = useState(false);
 
@@ -32,7 +48,7 @@ function Statuses() {
     fn()
       .then(() => router.invalidate())
       .catch((err) => {
-        toast.error(err instanceof Error ? err.message : "That did not work");
+        toast.error(err instanceof Error ? err.message : t("dash.product.failed"));
         router.invalidate();
       });
   }
@@ -48,14 +64,14 @@ function Statuses() {
 
   return (
     <>
-      <PageHead title="Statuses" sub="Where a post can be. The order here is the order on the roadmap and the timeline." />
+      <PageHead title={t("dash.product.statusesTitle")} sub={t("dash.product.statusesSub")} />
 
       <LocaleTabs baseline={root.workspace.defaultLocale} missing={root.statuses.filter((s) => !s.translated).length} />
       <SectionHead
-        title="Statuses"
+        title={t("dash.product.statuses")}
         right={
           <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>
-            <PlusIcon weight="bold" className="size-3" /> New status
+            <PlusIcon weight="bold" className="size-3" /> {t("dash.product.newStatus")}
           </Button>
         }
       />
@@ -67,8 +83,8 @@ function Statuses() {
           first={i === 0}
           last={i === root.statuses.length - 1}
           onMove={(d) => move(s.key, d)}
-          onSave={(patch) => fire(() => saveStatus({ data: { key: s.key, ...patch } }), "Saved")}
-          onDelete={() => confirm(`Delete "${s.label}"?`) && fire(() => deleteStatus({ data: { key: s.key } }), "Status deleted")}
+          onSave={(patch) => fire(() => saveStatus({ data: { key: s.key, ...patch } }), t("dash.product.statusSaved"))}
+          onDelete={() => confirm(t("dash.product.deleteStatusConfirm").replace("{name}", () => s.label)) && fire(() => deleteStatus({ data: { key: s.key } }), t("dash.product.statusDeleted"))}
         />
       ))}
       {adding ? (
@@ -76,11 +92,11 @@ function Statuses() {
           status={{ key: "", label: "", color: "#6e8bff", kind: "planned", position: 99, onRoadmap: true }}
           count={0}
           editing
-          onSave={(patch) => { fire(() => saveStatus({ data: patch }), "Status added"); setAdding(false); }}
+          onSave={(patch) => { fire(() => saveStatus({ data: patch }), t("dash.product.statusAdded")); setAdding(false); }}
           onCancel={() => setAdding(false)}
         />
       ) : null}
-      <p className="pt-4 text-xs text-faint">Each status has a kind that tells openheard what it means. New posts land in the first "open" kind, merges go to "closed", shipping from the changelog uses "done".</p>
+      <p className="pt-4 text-xs text-faint">{t("dash.product.statusesHint")}</p>
     </>
   );
 }
@@ -108,6 +124,7 @@ function StatusRow({
   onDelete?: () => void;
   onCancel?: () => void;
 }) {
+  const { t } = useLocale();
   const [editing, setEditing] = useState(!!initialEditing);
   const [label, setLabel] = useState(status.label);
   const [color, setColor] = useState(status.color);
@@ -135,7 +152,7 @@ function StatusRow({
         }}
       >
         <div className="flex items-center gap-2">
-          <input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label" className="h-8 w-48 rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none placeholder:text-faint focus:border-ring/60" />
+          <input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t("dash.product.label")} className="h-8 w-48 rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none placeholder:text-faint focus:border-ring/60" />
           <span className="flex gap-1.5">
             {SWATCHES.map((c) => (
               <button key={c} type="button" onClick={() => setColor(c)} aria-label={c} className={cn("inline-flex size-[22px] items-center justify-center rounded-full", color === c && "ring-2 ring-foreground ring-offset-2 ring-offset-background")} style={{ background: c }}>
@@ -148,26 +165,26 @@ function StatusRow({
         <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex h-8 items-center gap-2 rounded-lg border border-input bg-card pr-2 pl-2.5 text-[13px] outline-none hover:bg-accent">
-              <span className="text-faint">kind</span> {kind} <CaretDownIcon className="size-2.5 text-faint" />
+              <span className="text-faint">{t("dash.product.kind")}</span> {kind} <CaretDownIcon className="size-2.5 text-faint" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-64">
               {STATUS_KINDS.map((k) => (
                 <DropdownMenuItem key={k} onClick={() => setKind(k)}>
                   <span className="w-16 font-semibold">{k}</span>
-                  <span className="text-xs text-muted-foreground">{KIND_LABEL[k]}</span>
+                  <span className="text-xs text-muted-foreground">{t(KIND_KEY[k])}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
           <label className="inline-flex items-center gap-2 text-[13px] text-muted-foreground">
-            <Toggle on={onRoadmap} onChange={setOnRoadmap} label="Show on roadmap" /> Show on roadmap
+            <Toggle on={onRoadmap} onChange={setOnRoadmap} label={t("dash.product.showOnRoadmap")} /> {t("dash.product.showOnRoadmap")}
           </label>
           <span className="flex-1" />
           <Button size="sm" variant="ghost" type="button" onClick={() => (onCancel ? onCancel() : setEditing(false))}>
-            Cancel
+            {t("dash.product.cancel")}
           </Button>
           <Button size="sm" type="submit" disabled={!label.trim()}>
-            Save
+            {t("dash.product.save")}
           </Button>
         </div>
       </form>
@@ -187,19 +204,19 @@ function StatusRow({
       <span className="size-2.5 rounded-full" style={{ background: status.color }} />
       <span className="w-40 text-[13px] font-semibold">{status.label}</span>
       <span className="font-mono text-[11px] text-faint">{status.kind}</span>
-      {status.onRoadmap ? <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-faint">roadmap</span> : null}
+      {status.onRoadmap ? <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-faint">{t("dash.product.roadmapChip")}</span> : null}
       <span className="flex-1" />
       <span className="text-xs text-faint tabular-nums">
-        {count} {count === 1 ? "post" : "posts"}
+        {count} {count === 1 ? t("dash.product.post") : t("dash.product.posts")}
       </span>
       <DropdownMenu>
         <DropdownMenuTrigger className="inline-flex size-[26px] items-center justify-center rounded-md text-faint outline-none hover:bg-accent hover:text-foreground">
           <DotsThreeIcon weight="bold" className="size-3.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-32">
-          <DropdownMenuItem onClick={startEdit}>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={startEdit}>{t("dash.product.edit")}</DropdownMenuItem>
           <DropdownMenuItem onClick={onDelete} className="text-destructive">
-            Delete
+            {t("dash.product.delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

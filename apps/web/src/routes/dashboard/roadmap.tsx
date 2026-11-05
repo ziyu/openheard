@@ -43,6 +43,8 @@ import { KIND_ICON, roadmapStatuses, useStatuses } from "@/lib/status";
 import type { StatusInfo } from "@/lib/status";
 import { cn } from "@openheard/ui/lib/utils";
 import { SITE_NAME } from "@/lib/site-brand";
+import { DEFAULT_LOCALE, translate, type Locale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,7 +64,10 @@ export const Route = createFileRoute("/dashboard/roadmap")({
   loader: async ({ deps }) => {
     return listRoadmapAdmin({ data: { sort: deps.sort ?? "top", board: deps.board } });
   },
-  head: () => ({ meta: [{ title: `Roadmap · ${SITE_NAME}` }] }),
+  head: ({ matches }) => {
+    const locale = (matches[0]?.loaderData as { locale?: Locale } | undefined)?.locale ?? DEFAULT_LOCALE;
+    return { meta: [{ title: `${translate(locale, "dash.shell.roadmap")} · ${SITE_NAME}` }] };
+  },
   component: Roadmap,
   errorComponent: ({ error }) => <DashboardErrorState message={(error as Error)?.message} retry="/dashboard/roadmap" />,
   pendingComponent: DashboardPanelSkeleton,
@@ -95,6 +100,7 @@ function Roadmap() {
   const root = useLoaderData({ from: "__root__" });
   const router = useRouter();
   const statuses = useStatuses();
+  const { t } = useLocale();
   const columns = roadmapStatuses(statuses);
   const sort = search.sort ?? "top";
 
@@ -192,7 +198,7 @@ function Roadmap() {
       await router.invalidate();
     } catch (err) {
       setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, status: originalStatus } : p)));
-      toast.error(err instanceof Error ? err.message : "Could not move post");
+      toast.error(err instanceof Error ? err.message : t("dash.ops.roadmap.moveFailed"));
     }
   }
 
@@ -208,10 +214,10 @@ function Roadmap() {
 
   return (
     <Panel
-      title="Roadmap"
+      title={t("dash.shell.roadmap")}
       actions={
         <span className="hidden text-[13px] text-faint lg:inline">
-          Drag cards between columns to change status
+          {t("dash.ops.roadmap.hint")}
         </span>
       }
     >
@@ -222,13 +228,13 @@ function Roadmap() {
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-muted-foreground outline-none hover:bg-accent hover:text-foreground">
               <SortAscendingIcon className="size-3.5" />
-              {sort === "top" ? "Most votes" : "Newest"}
+              {t(sort === "top" ? "dash.ops.sortTop" : "dash.ops.sortNewest")}
               <CaretDownIcon className="size-2.5 text-faint" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-36">
               {(["top", "new"] as const).map((s) => (
                 <DropdownMenuItem key={s} onClick={() => navigate({ search: (p) => ({ ...p, sort: s === "top" ? undefined : s }) })}>
-                  {s === "top" ? "Most votes" : "Newest"}
+                  {t(s === "top" ? "dash.ops.sortTop" : "dash.ops.sortNewest")}
                   {sort === s ? <CheckIcon weight="bold" className="ml-auto size-3" /> : null}
                 </DropdownMenuItem>
               ))}
@@ -237,11 +243,11 @@ function Roadmap() {
           <DropdownMenu>
             <DropdownMenuTrigger className={cn("inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] outline-none hover:bg-accent hover:text-foreground", search.board ? "text-foreground" : "text-muted-foreground")}>
               <FunnelSimpleIcon className="size-3.5" />
-              Filter
+              {t("dash.ops.filter")}
               <CaretDownIcon className="size-2.5 text-faint" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-48">
-              <DropdownMenuLabel className="text-[11px] tracking-[0.06em] text-faint uppercase">Board</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[11px] tracking-[0.06em] text-faint uppercase">{t("dash.ops.board")}</DropdownMenuLabel>
               {root.boards.map((b) => (
                 <DropdownMenuItem key={b.id} onClick={() => navigate({ search: (p) => ({ ...p, board: p.board === b.id ? undefined : b.id }) })}>
                   <span className="flex-1">{b.name}</span>
@@ -283,6 +289,7 @@ function Column({
 }) {
   const G = GLYPH[KIND_ICON[status.kind]];
   const filled = status.kind === "done" || status.kind === "closed";
+  const { t } = useLocale();
 
   return (
     <div className="flex min-w-[260px] flex-1 flex-col">
@@ -296,7 +303,7 @@ function Column({
           type="button"
           onClick={() => navigate({ to: "/dashboard/inbox", search: { status: status.key } })}
           className="inline-flex size-6 items-center justify-center rounded-md text-faint hover:bg-accent hover:text-foreground"
-          title={`New post in ${status.label}`}
+          title={t("dash.ops.roadmap.newIn").replace("{status}", status.label)}
         >
           <PlusIcon className="size-3.5" />
         </button>
@@ -311,7 +318,7 @@ function Column({
         </SortableContext>
         {items.length === 0 ? (
           <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-8 text-[13px] text-faint">
-            Nothing {status.label.toLowerCase()} yet
+            {t("dash.ops.roadmap.empty").replace("{status}", status.label.toLowerCase())}
           </div>
         ) : null}
       </DroppableColumn>

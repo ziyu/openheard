@@ -7,16 +7,22 @@ import { toast } from "sonner";
 
 import { Row, SectionHead, Toggle } from "@/components/admin/panel";
 import { saveWorkspace } from "@/functions/settings";
+import { asLocale, translate } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
 import { PageHead } from "@/routes/dashboard/settings";
 
 export const Route = createFileRoute("/dashboard/settings/access")({
-  head: () => ({ meta: [{ title: "Access · settings" }] }),
+  head: ({ matches }) => {
+    const locale = asLocale((matches[0]?.loaderData as { locale?: string } | undefined)?.locale);
+    return { meta: [{ title: translate(locale, "dash.workspace.headAccess") }] };
+  },
   component: Access,
 });
 
 function Access() {
   const root = useLoaderData({ from: "__root__" });
   const router = useRouter();
+  const { t } = useLocale();
   const ws = root.workspace;
   const [form, setForm] = useState({ whoCanPost: ws.whoCanPost, anonymousVoting: ws.anonymousVoting, requireApproval: ws.requireApproval, showRoadmap: ws.showRoadmap, showChangelog: ws.showChangelog });
   const dirty = Object.entries(form).some(([k, v]) => (ws as Record<string, unknown>)[k] !== v);
@@ -24,43 +30,43 @@ function Access() {
   function save() {
     saveWorkspace({ data: { name: ws.name, tagline: ws.tagline, theme: ws.theme === "light" ? "light" : "dark", poweredBy: ws.poweredBy, accent: ws.accent, ...form } })
       .then(() => router.invalidate())
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Could not save"));
+      .catch((err) => toast.error(err instanceof Error ? err.message : t("dash.workspace.couldNotSave")));
   }
 
   return (
     <>
-      <PageHead title="Access" sub="Who can do what on the public board." />
-      <SectionHead title="Posting" />
-      <Row label="Who can post" help="Members are people on the Team page. Anyone means any signed-in user.">
+      <PageHead title={t("dash.shell.access")} sub={t("dash.workspace.accessSub")} />
+      <SectionHead title={t("dash.workspace.sectionPosting")} />
+      <Row label={t("dash.workspace.whoCanPost")} help={t("dash.workspace.whoCanPostHelp")}>
         <DropdownMenu>
           <DropdownMenuTrigger className="inline-flex h-[30px] items-center gap-2 rounded-md border border-input bg-card pr-2 pl-2.5 text-[13px] outline-none hover:bg-accent">
-            {form.whoCanPost === "anyone" ? "Anyone signed in" : "Team members only"} <CaretDownIcon className="size-2.5 text-faint" />
+            {t(form.whoCanPost === "anyone" ? "dash.workspace.anyoneSignedIn" : "dash.workspace.teamMembersOnly")} <CaretDownIcon className="size-2.5 text-faint" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuItem onClick={() => setForm({ ...form, whoCanPost: "anyone" })}>Anyone signed in</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setForm({ ...form, whoCanPost: "members" })}>Team members only</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setForm({ ...form, whoCanPost: "anyone" })}>{t("dash.workspace.anyoneSignedIn")}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setForm({ ...form, whoCanPost: "members" })}>{t("dash.workspace.teamMembersOnly")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </Row>
-      <Row label="Require approval" help="New posts stay hidden until an admin approves them.">
-        <Toggle on={form.requireApproval} onChange={(v) => setForm({ ...form, requireApproval: v })} label="Require approval" />
+      <Row label={t("dash.workspace.requireApproval")} help={t("dash.workspace.requireApprovalHelp")}>
+        <Toggle on={form.requireApproval} onChange={(v) => setForm({ ...form, requireApproval: v })} label={t("dash.workspace.requireApproval")} />
       </Row>
-      <Row label="Anonymous voting" help="Visitors vote once per browser and can claim it when they sign in. Lands with the next release.">
-        <Toggle on={form.anonymousVoting} onChange={(v) => setForm({ ...form, anonymousVoting: v })} label="Anonymous voting" />
+      <Row label={t("dash.workspace.anonymousVoting")} help={t("dash.workspace.anonymousVotingHelp")}>
+        <Toggle on={form.anonymousVoting} onChange={(v) => setForm({ ...form, anonymousVoting: v })} label={t("dash.workspace.anonymousVoting")} />
       </Row>
       <div className="pt-7">
-        <SectionHead title="Public tabs" />
+        <SectionHead title={t("dash.workspace.sectionPublicTabs")} />
       </div>
-      <Row label="Roadmap" help="Hide it if you do not want to promise order.">
-        <Toggle on={form.showRoadmap} onChange={(v) => setForm({ ...form, showRoadmap: v })} label="Show roadmap" />
+      <Row label={t("dash.shell.roadmap")} help={t("dash.workspace.roadmapHelp")}>
+        <Toggle on={form.showRoadmap} onChange={(v) => setForm({ ...form, showRoadmap: v })} label={t("dash.workspace.showRoadmap")} />
       </Row>
-      <Row label="Changelog" help="Hide it until you have shipped something.">
-        <Toggle on={form.showChangelog} onChange={(v) => setForm({ ...form, showChangelog: v })} label="Show changelog" />
+      <Row label={t("dash.shell.changelog")} help={t("dash.workspace.changelogHelp")}>
+        <Toggle on={form.showChangelog} onChange={(v) => setForm({ ...form, showChangelog: v })} label={t("dash.workspace.showChangelog")} />
       </Row>
       <div className="flex items-center justify-end gap-3 border-t pt-4">
-        <span className="text-xs text-faint">{dirty ? "Unsaved changes" : "Saved"}</span>
-        <LoadingButton onAction={save} disabled={!dirty} successLabel="Saved" onError={(err) => toast.error(err instanceof Error ? err.message : "Could not save")}>
-          Save
+        <span className="text-xs text-faint">{dirty ? t("dash.workspace.unsaved") : t("dash.workspace.saved")}</span>
+        <LoadingButton onAction={save} disabled={!dirty} successLabel={t("dash.workspace.saved")} onError={(err) => toast.error(err instanceof Error ? err.message : t("dash.workspace.couldNotSave"))}>
+          {t("dash.workspace.save")}
         </LoadingButton>
       </div>
     </>

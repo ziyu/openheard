@@ -1,12 +1,20 @@
 import en from "@/messages/en.json";
 import zhCN from "@/messages/zh-CN.json";
+import { dashboardMessages } from "@/messages/dashboard";
 
 export const SUPPORTED_LOCALES = ["en", "zh-CN"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
-export type MessageKey = keyof typeof en;
+// Public pages read the base JSON; the dashboard adds its own per-area modules.
+const base = { en: { ...en }, "zh-CN": { ...zhCN } };
+const all = {
+  en: { ...base.en, ...dashboardMessages.en },
+  "zh-CN": { ...base["zh-CN"], ...dashboardMessages["zh-CN"] },
+};
 
-const messages: Record<Locale, Record<MessageKey, string>> = { en, "zh-CN": zhCN };
+export type MessageKey = keyof typeof all.en;
+
+const messages: Record<Locale, Record<MessageKey, string>> = all as Record<Locale, Record<MessageKey, string>>;
 
 /** Cookie keeps a visitor's choice for unprefixed surfaces (dashboard, auth). */
 export const LOCALE_COOKIE = "feedback.locale";
@@ -58,6 +66,11 @@ export function localeHref(pathname: string, search: string, hash: string, targe
   return `/${target}${rest ? `/${rest}` : ""}${search}${hash}`;
 }
 
-export function translate(locale: Locale, key: MessageKey): string {
-  return messages[locale][key] ?? messages[DEFAULT_LOCALE][key];
+/** Any key is accepted; a missing entry renders as the key so QA can spot it. */
+export type AnyMessageKey = MessageKey | (string & {});
+
+export function translate(locale: Locale, key: AnyMessageKey): string {
+  const table = messages[locale] as Record<string, string | undefined>;
+  const fallback = messages[DEFAULT_LOCALE] as Record<string, string | undefined>;
+  return table[key] ?? fallback[key] ?? key;
 }

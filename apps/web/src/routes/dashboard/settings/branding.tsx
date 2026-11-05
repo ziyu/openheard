@@ -7,11 +7,16 @@ import { toast } from "sonner";
 import { Row, SectionHead } from "@/components/admin/panel";
 import Logo from "@/components/logo";
 import { saveWorkspace } from "@/functions/settings";
+import { asLocale, translate } from "@/lib/locale";
+import { useLocale } from "@/lib/locale-react";
 import { PageHead } from "@/routes/dashboard/settings";
 import { cn } from "@openheard/ui/lib/utils";
 
 export const Route = createFileRoute("/dashboard/settings/branding")({
-  head: () => ({ meta: [{ title: "Branding · settings" }] }),
+  head: ({ matches }) => {
+    const locale = asLocale((matches[0]?.loaderData as { locale?: string } | undefined)?.locale);
+    return { meta: [{ title: translate(locale, "dash.workspace.headBranding") }] };
+  },
   component: Branding,
 });
 
@@ -21,6 +26,7 @@ const SWATCHES = [DEFAULT, "#3ecf8e", "#f2b53d", "#e0705f", "#b08cff", "#5fc8e0"
 function Branding() {
   const root = useLoaderData({ from: "__root__" });
   const router = useRouter();
+  const { t } = useLocale();
   const ws = root.workspace;
   const [accent, setAccent] = useState(ws.accent ?? DEFAULT);
   const [busy, setBusy] = useState(false);
@@ -31,9 +37,9 @@ function Branding() {
     try {
       await saveWorkspace({ data: { name: ws.name, tagline: ws.tagline, theme: ws.theme === "light" ? "light" : "dark", poweredBy: ws.poweredBy, requireApproval: ws.requireApproval, accent: accent === DEFAULT ? null : accent } });
       await router.invalidate();
-      toast.success("Saved");
+      toast.success(t("dash.workspace.saved"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save");
+      toast.error(err instanceof Error ? err.message : t("dash.workspace.couldNotSave"));
     } finally {
       setBusy(false);
     }
@@ -41,9 +47,9 @@ function Branding() {
 
   return (
     <>
-      <PageHead title="Branding" sub="How the public board looks to your users. The dashboard stays the same for everyone." />
-      <SectionHead title="Appearance" />
-      <Row label="Accent" help="Voted pills, the active nav dot, links and focus rings on the public board.">
+      <PageHead title={t("dash.shell.branding")} sub={t("dash.workspace.brandingSub")} />
+      <SectionHead title={t("dash.workspace.sectionAppearance")} />
+      <Row label={t("dash.workspace.accent")} help={t("dash.workspace.accentHelp")}>
         <div className="flex items-center gap-2">
           <span className="flex gap-1.5">
             {SWATCHES.map((c) => (
@@ -52,27 +58,27 @@ function Branding() {
               </button>
             ))}
           </span>
-          <input value={accent} onChange={(e) => setAccent(e.target.value)} aria-label="Accent color" className="h-8 w-24 rounded-lg border border-input bg-card px-2.5 font-mono text-[12px] outline-none focus:border-ring/60" />
+          <input value={accent} onChange={(e) => setAccent(e.target.value)} aria-label={t("dash.workspace.accentColorAria")} className="h-8 w-24 rounded-lg border border-input bg-card px-2.5 font-mono text-[12px] outline-none focus:border-ring/60" />
         </div>
       </Row>
-      <Row label="Preview" help="A voted pill in your accent.">
+      <Row label={t("dash.workspace.preview")} help={t("dash.workspace.previewHelp")}>
         <span className="flex h-14 w-12 flex-col items-center justify-center gap-0.5 rounded-lg border text-[#0d0d0f]" style={{ background: accent, borderColor: accent }}>
           <span className="text-[13px] leading-none">▲</span>
           <span className="font-mono text-[13px] leading-none font-semibold">128</span>
         </span>
       </Row>
-      <Row label="Logo" help="SVG or PNG, 64px square. Upload lands with image support.">
+      <Row label={t("dash.workspace.logo")} help={t("dash.workspace.logoHelp")}>
         <div className="flex items-center gap-2.5">
           <Logo size={36} />
           <Button variant="secondary" size="sm" disabled>
-            Replace
+            {t("dash.workspace.replace")}
           </Button>
         </div>
       </Row>
       <div className="flex items-center justify-end gap-3 border-t pt-4">
-        <span className="text-xs text-faint">{dirty ? "Unsaved changes" : "Saved"}</span>
+        <span className="text-xs text-faint">{dirty ? t("dash.workspace.unsaved") : t("dash.workspace.saved")}</span>
         <Button arrow size="sm" disabled={!dirty || busy} onClick={save}>
-          Save
+          {t("dash.workspace.save")}
         </Button>
       </div>
     </>

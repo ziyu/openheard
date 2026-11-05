@@ -145,8 +145,8 @@ function PostPage() {
           {[
             ["Status", current.label],
             ["Board", p.board.name],
-            ["Created", fullDate(p.createdAt)],
-            ["Updated", since(p.updatedAt)],
+            ["Created", fullDate(p.createdAt, locale)],
+            ["Updated", since(p.updatedAt, locale)],
           ].map(([k, v]) => (
             <div key={k} className="flex items-center justify-between px-2.5 py-1.5 text-[13px]">
               <dt className="text-faint">{k}</dt>
@@ -280,7 +280,7 @@ function PostPage() {
             <span className="inline-flex items-center gap-1.5 text-muted-foreground">
               <Avatar name={p.author?.name ?? "?"} image={p.author?.image} size={18} />
               {p.author?.name ?? "someone"}
-              <span className="text-faint">· {since(p.createdAt)}</span>
+              <span className="text-faint">· {since(p.createdAt, locale)}</span>
             </span>
           </div>
         </div>
@@ -356,7 +356,7 @@ function PostPage() {
                   <div className="flex flex-wrap items-center gap-2 text-[13px]">
                     <span className="font-semibold">{item.author?.name ?? "someone"}</span>
                     {team ? <TeamBadge /> : null}
-                    <span className="text-xs text-faint">{ago(item.at)}</span>
+                    <span className="text-xs text-faint">{ago(item.at, locale)}</span>
                   </div>
                   {item.kind === "comment" ? (
                     <div className="whitespace-pre-wrap text-sm leading-[1.55] text-muted-foreground">{item.body}</div>
