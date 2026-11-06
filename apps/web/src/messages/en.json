@@ -138,5 +138,6 @@
   "attachment.limit": "Up to 4 files per post.",
   "attachment.failed": "Upload failed. Try again.",
   "attachment.remove": "Remove file",
-  "post.attachments": "Attachments"
+  "post.attachments": "Attachments",
+  "attachment.limitComment": "Up to 2 files per comment."
 }

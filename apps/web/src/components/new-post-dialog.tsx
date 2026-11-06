@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { createPost, searchPosts } from "@/functions/posts";
+import { MAX_PER_POST, uploadAttachment } from "@/lib/upload-attachment";
 import { useLocale } from "@/lib/locale-react";
 import { openSignIn } from "@/lib/pending-action";
 import { findStatus, useStatuses } from "@/lib/status";
@@ -78,7 +79,7 @@ export function NewPostDialog({
 
   async function upload(list: FileList | File[]) {
     setUploadError(null);
-    const room = 4 - files.length;
+    const room = MAX_PER_POST - files.length;
     const picked = Array.from(list).slice(0, Math.max(0, room));
     if (!picked.length) {
       setUploadError(t("attachment.limit"));
@@ -86,23 +87,12 @@ export function NewPostDialog({
     }
     setUploading(true);
     for (const file of picked) {
-      if (file.size > 5 * 1024 * 1024) {
-        setUploadError(t("attachment.tooLarge"));
+      const { attachment, error } = await uploadAttachment(file);
+      if (!attachment) {
+        setUploadError(error === "tooLarge" ? t("attachment.tooLarge") : t("attachment.failed"));
         continue;
       }
-      const form = new FormData();
-      form.append("file", file);
-      try {
-        const res = await fetch("/api/attachments", { method: "POST", body: form });
-        const data = (await res.json()) as { id?: string; url?: string; contentType?: string; filename?: string; error?: string };
-        if (!res.ok || !data.id || !data.url) {
-          setUploadError(data.error ?? t("attachment.failed"));
-          continue;
-        }
-        setFiles((current) => [...current, { id: data.id!, url: data.url!, contentType: data.contentType ?? file.type, filename: data.filename ?? file.name }]);
-      } catch {
-        setUploadError(t("attachment.failed"));
-      }
+      setFiles((current) => [...current, attachment]);
     }
     setUploading(false);
   }

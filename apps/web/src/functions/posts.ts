@@ -183,6 +183,20 @@ export const getPost = createServerFn({ method: "GET" })
       .select({ id: attachment.id, filename: attachment.filename, contentType: attachment.contentType, sizeBytes: attachment.sizeBytes })
       .from(attachment)
       .where(and(eq(attachment.postId, p.id), eq(attachment.state, "ready")));
+    const commentIds = p.comments.map((c) => c.id);
+    const commentFiles = commentIds.length
+      ? await db
+          .select({ id: attachment.id, commentId: attachment.commentId, filename: attachment.filename, contentType: attachment.contentType, sizeBytes: attachment.sizeBytes })
+          .from(attachment)
+          .where(and(inArray(attachment.commentId, commentIds), eq(attachment.state, "ready")))
+      : [];
+    const filesByComment = new Map<number, { id: string; filename: string; contentType: string; sizeBytes: number }[]>();
+    for (const f of commentFiles) {
+      const key = f.commentId!;
+      const list = filesByComment.get(key) ?? [];
+      list.push({ id: f.id, filename: f.filename, contentType: f.contentType, sizeBytes: f.sizeBytes });
+      filesByComment.set(key, list);
+    }
     // Merge candidates: same board, shares a word of 5+ letters with the title.
     const words = p.title.toLowerCase().match(/[a-z]{5,}/g) ?? [];
     const similar = words.length
@@ -223,6 +237,7 @@ export const getPost = createServerFn({ method: "GET" })
           author: c.author,
           body: c.body,
           internal: c.internal,
+          attachments: filesByComment.get(c.id) ?? [],
           // Grouped: [{ emoji, count, mine }]
           reactions: Object.values(
             c.reactions.reduce<Record<string, { emoji: string; count: number; mine: boolean }>>((acc, r) => {
@@ -372,16 +387,41 @@ export const toggleAnonVote = createServerFn({ method: "POST" })
 
 export const addComment = createServerFn({ method: "POST" })
   .middleware([sessionMiddleware])
-  .validator((d: unknown) => z.object({ postId: z.number().int(), body: z.string().trim().min(1).max(5000), internal: z.boolean().default(false) }).parse(d))
+  .validator((d: unknown) =>
+    z
+      .object({
+        postId: z.number().int(),
+        body: z.string().trim().min(1).max(5000),
+        internal: z.boolean().default(false),
+        attachmentIds: z.array(z.string().uuid()).max(2).default([]),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const u = requireUser(context.user);
     const internal = data.internal && u.role === "admin";
     const db = createDb();
     await ownPost(db, data.postId, context.workspace.id);
-    await db.insert(comment).values({ postId: data.postId, authorId: u.id, body: data.body, internal });
+    const [created] = await db
+      .insert(comment)
+      .values({ postId: data.postId, authorId: u.id, body: data.body, internal })
+      .returning({ id: comment.id });
+    if (data.attachmentIds.length) {
+      // Same ownership rule as posts: only this uploader's unbound files.
+      await db
+        .update(attachment)
+        .set({ commentId: created.id })
+        .where(and(
+          inArray(attachment.id, data.attachmentIds),
+          eq(attachment.workspaceId, context.workspace.id),
+          eq(attachment.uploaderId, u.id),
+          sql`${attachment.postId} is null`,
+          sql`${attachment.commentId} is null`,
+        ));
+    }
     if (!internal) await db.update(post).set({ commentCount: sql`${post.commentCount} + 1` }).where(eq(post.id, data.postId));
     if (!internal) purgeWorkspaceCache(originFromRequest(), [data.postId]);
-    return { ok: true };
+    return { ok: true, id: created.id };
   });
 
 export const REACTIONS = ["👍", "❤️", "🎉", "👀", "🚀", "😂"] as const;

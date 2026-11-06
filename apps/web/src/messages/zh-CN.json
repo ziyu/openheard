@@ -138,5 +138,6 @@
   "attachment.limit": "每条反馈最多 4 个附件。",
   "attachment.failed": "上传失败，请重试。",
   "attachment.remove": "移除附件",
-  "post.attachments": "附件"
+  "post.attachments": "附件",
+  "attachment.limitComment": "每条评论最多 2 个附件。"
 }

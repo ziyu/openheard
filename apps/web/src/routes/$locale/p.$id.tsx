@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowsMergeIcon, PaperclipIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon, ArrowsMergeIcon, PaperclipIcon, XIcon } from "@phosphor-icons/react";
 import { useLocale } from "@/lib/locale-react";
 
 const LOCALE_LABEL = { en: "English", "zh-CN": "中文" } as const;
@@ -20,6 +20,7 @@ import { RailLabel, Shell } from "@/components/shell";
 import { ErrorState, PostSkeleton } from "@/components/states";
 import { VoteButton } from "@/components/vote-button";
 import { addComment, getPost, mergePosts, savePostContent, setEta } from "@/functions/posts";
+import { MAX_PER_COMMENT, uploadAttachment, type UploadedAttachment } from "@/lib/upload-attachment";
 import { findStatus, roadmapStatuses, useStatuses } from "@/lib/status";
 import { ago, fullDate, since } from "@/lib/time";
 import { cn } from "@openheard/ui/lib/utils";
@@ -62,6 +63,7 @@ type OptimisticComment = {
   internal?: boolean;
   commentId: number;
   reactions: [];
+  attachments: UploadedAttachment[];
   type?: undefined;
   to?: undefined;
   note?: undefined;
@@ -77,6 +79,10 @@ function PostPage() {
   const [expanded, setExpanded] = useState(false);
   const [ready, setReady] = useState(false);
   const [pendingComments, setPendingComments] = useState<OptimisticComment[]>([]);
+  const [replyFiles, setReplyFiles] = useState<UploadedAttachment[]>([]);
+  const [replyUploading, setReplyUploading] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+  const replyFileInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(p.title);
   const [draftBody, setDraftBody] = useState(p.body);
@@ -89,6 +95,26 @@ function PostPage() {
     setPendingComments([]);
   }
 
+  async function uploadReplyFiles(list: FileList | File[]) {
+    setReplyError(null);
+    const room = MAX_PER_COMMENT - replyFiles.length;
+    const picked = Array.from(list).slice(0, Math.max(0, room));
+    if (!picked.length) {
+      setReplyError(t("attachment.limitComment"));
+      return;
+    }
+    setReplyUploading(true);
+    for (const file of picked) {
+      const { attachment, error } = await uploadAttachment(file);
+      if (!attachment) {
+        setReplyError(error === "tooLarge" ? t("attachment.tooLarge") : t("attachment.failed"));
+        continue;
+      }
+      setReplyFiles((current) => [...current, attachment]);
+    }
+    setReplyUploading(false);
+  }
+
   function submitReply(e: React.FormEvent) {
     e.preventDefault();
     if (!root.user) {
@@ -97,6 +123,7 @@ function PostPage() {
     }
     if (!reply.trim()) return;
     const body = reply.trim();
+    const files = replyFiles;
     const tempId = -Date.now();
     const optimistic: OptimisticComment = {
       id: tempId,
@@ -106,12 +133,14 @@ function PostPage() {
       at: new Date().toISOString(),
       commentId: tempId,
       reactions: [],
+      attachments: files,
     };
     setPendingComments((prev) => [...prev, optimistic]);
     setReply("");
+    setReplyFiles([]);
     setExpanded(false);
 
-    addComment({ data: { postId: p.id, body } })
+    addComment({ data: { postId: p.id, body, attachmentIds: files.map((f) => f.id) } })
       .then(() => router.invalidate())
       .catch((err) => {
         setPendingComments((prev) => prev.filter((c) => c.id !== tempId));
@@ -354,9 +383,50 @@ function PostPage() {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submitReply(e);
             }}
           />
+          {replyFiles.length || replyError ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {replyFiles.map((f) => (
+                <span key={f.id} className="relative overflow-hidden rounded-md border border-input">
+                  {f.contentType.startsWith("image/") ? (
+                    <img src={f.url} alt={f.filename} className="h-14 w-20 object-cover" />
+                  ) : (
+                    <span className="flex h-14 w-36 items-center gap-1.5 px-2 text-[12px] text-muted-foreground">
+                      <PaperclipIcon className="size-3.5 shrink-0" />
+                      <span className="truncate">{f.filename}</span>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setReplyFiles((current) => current.filter((x) => x.id !== f.id))}
+                    className="absolute top-0.5 right-0.5 inline-flex size-5 items-center justify-center rounded-full bg-background/80 text-faint hover:text-foreground"
+                    aria-label={t("attachment.remove")}
+                  >
+                    <XIcon className="size-3" />
+                  </button>
+                </span>
+              ))}
+              {replyError ? <span className="text-xs text-destructive">{replyError}</span> : null}
+            </div>
+          ) : null}
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 text-xs text-faint">
-              <PaperclipIcon className="size-3.5" /> {t("post.attach")}
+            <span className="flex items-center gap-2">
+              <input
+                ref={replyFileInput}
+                type="file"
+                multiple
+                accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,video/mp4,video/webm"
+                className="hidden"
+                onChange={(e) => e.target.files && void uploadReplyFiles(e.target.files)}
+              />
+              <button
+                type="button"
+                onClick={() => replyFileInput.current?.click()}
+                disabled={replyUploading || replyFiles.length >= MAX_PER_COMMENT}
+                className="inline-flex items-center gap-1.5 text-xs text-faint hover:text-foreground disabled:opacity-50"
+                aria-label={t("attachment.add")}
+              >
+                <PaperclipIcon className="size-3.5" /> {replyUploading ? t("attachment.uploading") : t("post.attach")}
+              </button>
             </span>
             <Button variant="secondary" size="sm" type="submit" disabled={reply.trim().length === 0}>
               {t("post.comment")}
@@ -379,7 +449,27 @@ function PostPage() {
                     <span className="text-xs text-faint">{ago(item.at, locale)}</span>
                   </div>
                   {item.kind === "comment" ? (
-                    <div className="whitespace-pre-wrap text-sm leading-[1.55] text-muted-foreground">{item.body}</div>
+                    <>
+                      <div className="whitespace-pre-wrap text-sm leading-[1.55] text-muted-foreground">{item.body}</div>
+                      {item.attachments && item.attachments.length ? (
+                        <ul className="flex flex-wrap gap-2 pt-1">
+                          {item.attachments.map((a) => (
+                            <li key={a.id}>
+                              <a href={`/files/${a.id}`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border border-input">
+                                {a.contentType.startsWith("image/") ? (
+                                  <img src={`/files/${a.id}`} alt={a.filename} className="max-h-40 w-auto object-cover" loading="lazy" />
+                                ) : (
+                                  <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-foreground">
+                                    <PaperclipIcon className="size-3.5 shrink-0" />
+                                    <span className="max-w-[180px] truncate">{a.filename}</span>
+                                  </span>
+                                )}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </>
                   ) : (
                     <div className="text-sm leading-[1.55] text-muted-foreground">
                       {item.type === "status" && item.to ? (
