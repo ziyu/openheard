@@ -9,7 +9,7 @@ export type AttachmentItem = { id: string; filename: string; contentType: string
 
 const urlFor = (id: string) => `/files/${id}`;
 
-/** A real frame beats a filename: draw the first frame to a canvas and show it with a play badge. */
+/** A real frame beats a filename: sample a few timestamps and keep the least blank one. */
 function VideoTile({ url, filename, durationLabel, className }: { url: string; filename: string; durationLabel?: string; className?: string }) {
   const [poster, setPoster] = useState<string | null>(null);
   const [duration, setDuration] = useState<string | null>(durationLabel ?? null);
@@ -21,26 +21,70 @@ function VideoTile({ url, filename, durationLabel, className }: { url: string; f
     video.playsInline = true;
     video.preload = "metadata";
     let live = true;
-    const seek = () => {
-      try { video.currentTime = Math.min(0.1, (video.duration || 1) / 2); } catch { /* keep the first frame */ }
-    };
+    let best: { score: number; dataUrl: string } | null = null;
+    let index = 0;
+    // A teaser often opens on a blank card, so try a few points and keep the
+    // frame with the most variation instead of the very first one.
+    const spots = [0.25, 0.5, 0.72];
+
     const draw = () => {
-      if (!live || !video.videoWidth) return;
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      try { setPoster(canvas.toDataURL("image/jpeg", 0.72)); } catch { /* tainted canvas: fall back to the badge */ }
-      if (Number.isFinite(video.duration)) {
+      if (!live) return;
+      if (Number.isFinite(video.duration) && video.duration > 0) {
         const total = Math.round(video.duration);
         setDuration(`${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`);
       }
+      if (video.videoWidth) {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          let score = 0;
+          try {
+            const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let sum = 0;
+            let sumSq = 0;
+            const step = Math.max(4, Math.floor(data.length / 4096 / 4) * 4);
+            let count = 0;
+            for (let i = 0; i < data.length; i += step) {
+              const luma = 0.299 * data[i]! + 0.587 * data[i + 1]! + 0.114 * data[i + 2]!;
+              sum += luma;
+              sumSq += luma * luma;
+              count++;
+            }
+            const mean = sum / Math.max(1, count);
+            score = sumSq / Math.max(1, count) - mean * mean;
+          } catch {
+            score = 1; // unreadable pixels still make a usable poster
+          }
+          if (!best || score > best.score) {
+            try { best = { score, dataUrl: canvas.toDataURL("image/jpeg", 0.72) }; } catch { /* tainted: keep the previous frame */ }
+          }
+        }
+      }
+      index += 1;
+      if (index < spots.length) {
+        try { video.currentTime = (video.duration || 1) * spots[index]!; } catch { finish(); }
+      } else {
+        finish();
+      }
     };
-    video.addEventListener("loadeddata", seek);
+
+    const finish = () => {
+      if (!live) return;
+      setPoster(best ? best.dataUrl : null);
+    };
+
+    const start = () => {
+      try { video.currentTime = (video.duration || 1) * spots[0]!; } catch { finish(); }
+    };
+
+    video.addEventListener("loadeddata", start);
     video.addEventListener("seeked", draw);
     return () => {
       live = false;
-      video.removeEventListener("loadeddata", seek);
+      video.removeEventListener("loadeddata", start);
       video.removeEventListener("seeked", draw);
       video.removeAttribute("src");
       video.load();
@@ -52,9 +96,9 @@ function VideoTile({ url, filename, durationLabel, className }: { url: string; f
       {poster ? (
         <img src={poster} alt={filename} className="h-full w-full object-cover" />
       ) : (
-        <span className="block h-28 w-48" aria-hidden />
+        <span className="block h-full w-full" aria-hidden />
       )}
-      <span className="absolute inset-0 flex items-center justify-center bg-black/25">
+      <span className="absolute inset-0 flex items-center justify-center bg-black/20">
         <span className="inline-flex size-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
           <PlayIcon weight="fill" className="size-4 translate-x-[1px]" />
         </span>
@@ -64,12 +108,6 @@ function VideoTile({ url, filename, durationLabel, className }: { url: string; f
   );
 }
 
-/**
- * Attachments open in a dialog instead of a new tab: images and video render
- * inline, PDFs stream in the browser's viewer, and text is fetched and shown
- * as text so nothing is ever treated as a page. Every view keeps a link to the
- * raw file for people who need to download it.
- */
 export function AttachmentList({ items, variant = "post" }: { items: AttachmentItem[]; variant?: "post" | "comment" }) {
   const { t } = useLocale();
   const [open, setOpen] = useState<AttachmentItem | null>(null);
