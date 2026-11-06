@@ -92,9 +92,9 @@ function VideoTile({ url, filename, durationLabel, className }: { url: string; f
   }, [url]);
 
   return (
-    <span className={cn("relative block overflow-hidden bg-secondary", className)}>
+    <span className={cn("relative block overflow-hidden bg-black/40", className)}>
       {poster ? (
-        <img src={poster} alt={filename} className="h-full w-full object-cover" />
+        <img src={poster} alt={filename} className="h-full w-full object-contain" />
       ) : (
         <span className="block h-full w-full" aria-hidden />
       )}
