@@ -139,5 +139,9 @@
   "attachment.failed": "Upload failed. Try again.",
   "attachment.remove": "Remove file",
   "post.attachments": "Attachments",
-  "attachment.limitComment": "Up to 2 files per comment."
+  "attachment.limitComment": "Up to 2 files per comment.",
+  "attachment.open": "Open attachment",
+  "attachment.openInTab": "Open in new tab",
+  "attachment.previewFailed": "Could not load that preview.",
+  "attachment.loading": "Loading…"
 }

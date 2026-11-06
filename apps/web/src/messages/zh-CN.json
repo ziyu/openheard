@@ -139,5 +139,9 @@
   "attachment.failed": "上传失败，请重试。",
   "attachment.remove": "移除附件",
   "post.attachments": "附件",
-  "attachment.limitComment": "每条评论最多 2 个附件。"
+  "attachment.limitComment": "每条评论最多 2 个附件。",
+  "attachment.open": "查看附件",
+  "attachment.openInTab": "新标签页打开",
+  "attachment.previewFailed": "预览加载失败。",
+  "attachment.loading": "加载中…"
 }
