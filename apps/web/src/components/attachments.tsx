@@ -10,9 +10,11 @@ export type AttachmentItem = { id: string; filename: string; contentType: string
 const urlFor = (id: string) => `/files/${id}`;
 
 /** A real frame beats a filename: sample a few timestamps and keep the least blank one. */
-function VideoTile({ url, filename, durationLabel, className }: { url: string; filename: string; durationLabel?: string; className?: string }) {
+function VideoTile({ url, filename, durationLabel, height }: { url: string; filename: string; durationLabel?: string; height: number }) {
   const [poster, setPoster] = useState<string | null>(null);
   const [duration, setDuration] = useState<string | null>(durationLabel ?? null);
+  // Portrait clips get a portrait tile instead of a letterboxed landscape one.
+  const [ratio, setRatio] = useState<string | null>(null);
 
   useEffect(() => {
     const video = document.createElement("video");
@@ -34,6 +36,7 @@ function VideoTile({ url, filename, durationLabel, className }: { url: string; f
         setDuration(`${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`);
       }
       if (video.videoWidth) {
+        setRatio(`${video.videoWidth} / ${video.videoHeight}`);
         const canvas = document.createElement("canvas");
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -92,7 +95,7 @@ function VideoTile({ url, filename, durationLabel, className }: { url: string; f
   }, [url]);
 
   return (
-    <span className={cn("relative block overflow-hidden bg-black/40", className)}>
+    <span className="relative block overflow-hidden rounded-lg border border-input bg-black/40" style={{ height, aspectRatio: ratio ?? "16 / 9" }}>
       {poster ? (
         <img src={poster} alt={filename} className="h-full w-full object-contain" />
       ) : (
@@ -156,7 +159,7 @@ export function AttachmentList({ items, variant = "post" }: { items: AttachmentI
                 <VideoTile
                   url={urlFor(a.id)}
                   filename={a.filename}
-                  className={variant === "post" ? "h-40 w-64" : "h-24 w-40"}
+                  height={variant === "post" ? 160 : 96}
                 />
               ) : (
                 <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] text-muted-foreground">
