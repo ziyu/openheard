@@ -1,4 +1,4 @@
-import { DownloadSimpleIcon, PaperclipIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, PaperclipIcon, PlayIcon } from "@phosphor-icons/react";
 import { Dialog, DialogContent, DialogTitle } from "@openheard/ui/components/dialog";
 import { useEffect, useState } from "react";
 
@@ -8,6 +8,61 @@ import { cn } from "@openheard/ui/lib/utils";
 export type AttachmentItem = { id: string; filename: string; contentType: string; sizeBytes?: number };
 
 const urlFor = (id: string) => `/files/${id}`;
+
+/** A real frame beats a filename: draw the first frame to a canvas and show it with a play badge. */
+function VideoTile({ url, filename, durationLabel, className }: { url: string; filename: string; durationLabel?: string; className?: string }) {
+  const [poster, setPoster] = useState<string | null>(null);
+  const [duration, setDuration] = useState<string | null>(durationLabel ?? null);
+
+  useEffect(() => {
+    const video = document.createElement("video");
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    let live = true;
+    const seek = () => {
+      try { video.currentTime = Math.min(0.1, (video.duration || 1) / 2); } catch { /* keep the first frame */ }
+    };
+    const draw = () => {
+      if (!live || !video.videoWidth) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      try { setPoster(canvas.toDataURL("image/jpeg", 0.72)); } catch { /* tainted canvas: fall back to the badge */ }
+      if (Number.isFinite(video.duration)) {
+        const total = Math.round(video.duration);
+        setDuration(`${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`);
+      }
+    };
+    video.addEventListener("loadeddata", seek);
+    video.addEventListener("seeked", draw);
+    return () => {
+      live = false;
+      video.removeEventListener("loadeddata", seek);
+      video.removeEventListener("seeked", draw);
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [url]);
+
+  return (
+    <span className={cn("relative block overflow-hidden bg-secondary", className)}>
+      {poster ? (
+        <img src={poster} alt={filename} className="h-full w-full object-cover" />
+      ) : (
+        <span className="block h-28 w-48" aria-hidden />
+      )}
+      <span className="absolute inset-0 flex items-center justify-center bg-black/25">
+        <span className="inline-flex size-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
+          <PlayIcon weight="fill" className="size-4 translate-x-[1px]" />
+        </span>
+      </span>
+      {duration ? <span className="absolute right-1.5 bottom-1.5 rounded bg-black/65 px-1.5 py-0.5 font-mono text-[10px] text-white">{duration}</span> : null}
+    </span>
+  );
+}
 
 /**
  * Attachments open in a dialog instead of a new tab: images and video render
@@ -58,6 +113,12 @@ export function AttachmentList({ items, variant = "post" }: { items: AttachmentI
                   alt={a.filename}
                   loading="lazy"
                   className={cn("object-cover", variant === "post" ? "max-h-64 w-auto" : "max-h-40 w-auto")}
+                />
+              ) : isVideo(a) ? (
+                <VideoTile
+                  url={urlFor(a.id)}
+                  filename={a.filename}
+                  className={variant === "post" ? "h-40 w-64" : "h-24 w-40"}
                 />
               ) : (
                 <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] text-muted-foreground">
