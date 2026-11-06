@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogTitle } from "@openheard/ui/components/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@openheard/ui/components/dropdown-menu";
-import { CaretDownIcon, ImageIcon, LightningIcon, PaperclipIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, LightningIcon, PaperclipIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -247,15 +247,12 @@ export function NewPostDialog({
             type="button"
             onClick={() => fileInput.current?.click()}
             disabled={uploading || files.length >= 4}
-            className="inline-flex h-11 w-16 items-center justify-center rounded-md border border-input bg-secondary text-faint hover:text-foreground disabled:opacity-50"
+            className="inline-flex h-11 w-16 items-center justify-center rounded-md border border-dashed border-input text-faint transition-colors hover:border-foreground/30 hover:bg-accent/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             aria-label={t("attachment.add")}
             title={t("attachment.add")}
           >
-            <ImageIcon className="size-3.5" />
+            <PlusIcon className="size-4" />
           </button>
-          <span className="inline-flex h-11 w-16 items-center justify-center rounded-md border border-dashed border-input text-faint">
-            <PlusIcon className="size-3.5" />
-          </span>
           <span className="ml-1 text-xs text-faint">{uploading ? t("attachment.uploading") : t("attachment.hint")}</span>
           {uploadError ? <span className="text-xs text-destructive">{uploadError}</span> : null}
           {files.length ? (
